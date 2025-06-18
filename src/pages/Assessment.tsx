@@ -5,14 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useAssessment, AssessmentData } from "@/hooks/useAssessment";
+import { AuthModal } from "@/components/AuthModal";
+import { AIRecommendations } from "@/components/AIRecommendations";
+import { toast } from "sonner";
 
 const Assessment = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [submittedAssessmentId, setSubmittedAssessmentId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { saveAssessment } = useAssessment();
+  
+  const [formData, setFormData] = useState<AssessmentData>({
     // Exam details
     examName: "",
     examYear: "",
@@ -63,6 +72,40 @@ const Assessment = () => {
       [field]: value
     }));
   };
+
+  const handleSubmit = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    try {
+      const result = await saveAssessment.mutateAsync(formData);
+      setSubmittedAssessmentId(result.id);
+      toast.success("Assessment completed! Generating AI recommendations...");
+    } catch (error) {
+      console.error('Error submitting assessment:', error);
+    }
+  };
+
+  // If assessment is submitted, show recommendations
+  if (submittedAssessmentId) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-800">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+            <h1 className="text-3xl font-bold text-gray-900 mt-4">Your College Recommendations</h1>
+          </div>
+          
+          <AIRecommendations assessmentId={submittedAssessmentId} />
+        </div>
+      </div>
+    );
+  }
 
   const renderStep = () => {
     switch (currentStep) {
@@ -392,14 +435,20 @@ const Assessment = () => {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button className="flex items-center">
-                  Get Recommendations
+                <Button 
+                  onClick={handleSubmit} 
+                  className="flex items-center"
+                  disabled={saveAssessment.isPending}
+                >
+                  {saveAssessment.isPending ? "Processing..." : "Get Recommendations"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
+
+        <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
       </div>
     </div>
   );

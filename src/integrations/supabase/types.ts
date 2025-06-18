@@ -9,7 +9,263 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_recommendations: {
+        Row: {
+          admission_probability: number
+          ai_reasoning: string
+          assessment_id: string | null
+          benefits: string[] | null
+          college_id: string | null
+          created_at: string
+          cultural_fit_score: number
+          financial_feasibility: number
+          id: string
+          predicted_cutoff: number | null
+          recommendation_rank: number
+          risk_factors: string[] | null
+          safety_rating: number
+          scholarship_eligibility: string[] | null
+          total_cost_estimation: number | null
+        }
+        Insert: {
+          admission_probability: number
+          ai_reasoning: string
+          assessment_id?: string | null
+          benefits?: string[] | null
+          college_id?: string | null
+          created_at?: string
+          cultural_fit_score: number
+          financial_feasibility: number
+          id?: string
+          predicted_cutoff?: number | null
+          recommendation_rank: number
+          risk_factors?: string[] | null
+          safety_rating: number
+          scholarship_eligibility?: string[] | null
+          total_cost_estimation?: number | null
+        }
+        Update: {
+          admission_probability?: number
+          ai_reasoning?: string
+          assessment_id?: string | null
+          benefits?: string[] | null
+          college_id?: string | null
+          created_at?: string
+          cultural_fit_score?: number
+          financial_feasibility?: number
+          id?: string
+          predicted_cutoff?: number | null
+          recommendation_rank?: number
+          risk_factors?: string[] | null
+          safety_rating?: number
+          scholarship_eligibility?: string[] | null
+          total_cost_estimation?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendations_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "student_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recommendations_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      colleges: {
+        Row: {
+          annual_fees_max: number | null
+          annual_fees_min: number | null
+          climate_type: string | null
+          courses: string[]
+          created_at: string
+          cultural_diversity_score: number | null
+          exam_accepted: Database["public"]["Enums"]["exam_type"][]
+          hostel_available: boolean | null
+          id: string
+          infrastructure_score: number | null
+          location: string
+          medical_facilities_nearby: boolean | null
+          name: string
+          placement_score: number | null
+          safety_score: number | null
+          scholarship_available: boolean | null
+          state: string
+          type: Database["public"]["Enums"]["college_type"]
+          updated_at: string
+        }
+        Insert: {
+          annual_fees_max?: number | null
+          annual_fees_min?: number | null
+          climate_type?: string | null
+          courses: string[]
+          created_at?: string
+          cultural_diversity_score?: number | null
+          exam_accepted: Database["public"]["Enums"]["exam_type"][]
+          hostel_available?: boolean | null
+          id?: string
+          infrastructure_score?: number | null
+          location: string
+          medical_facilities_nearby?: boolean | null
+          name: string
+          placement_score?: number | null
+          safety_score?: number | null
+          scholarship_available?: boolean | null
+          state: string
+          type: Database["public"]["Enums"]["college_type"]
+          updated_at?: string
+        }
+        Update: {
+          annual_fees_max?: number | null
+          annual_fees_min?: number | null
+          climate_type?: string | null
+          courses?: string[]
+          created_at?: string
+          cultural_diversity_score?: number | null
+          exam_accepted?: Database["public"]["Enums"]["exam_type"][]
+          hostel_available?: boolean | null
+          id?: string
+          infrastructure_score?: number | null
+          location?: string
+          medical_facilities_nearby?: boolean | null
+          name?: string
+          placement_score?: number | null
+          safety_score?: number | null
+          scholarship_available?: boolean | null
+          state?: string
+          type?: Database["public"]["Enums"]["college_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      historical_cutoffs: {
+        Row: {
+          category: Database["public"]["Enums"]["category_type"]
+          closing_marks: number | null
+          closing_rank: number | null
+          college_id: string | null
+          created_at: string
+          exam_name: Database["public"]["Enums"]["exam_type"]
+          exam_year: number
+          id: string
+          opening_marks: number | null
+          opening_rank: number | null
+          round_number: number | null
+          state_quota: boolean | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["category_type"]
+          closing_marks?: number | null
+          closing_rank?: number | null
+          college_id?: string | null
+          created_at?: string
+          exam_name: Database["public"]["Enums"]["exam_type"]
+          exam_year: number
+          id?: string
+          opening_marks?: number | null
+          opening_rank?: number | null
+          round_number?: number | null
+          state_quota?: boolean | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["category_type"]
+          closing_marks?: number | null
+          closing_rank?: number | null
+          college_id?: string | null
+          created_at?: string
+          exam_name?: Database["public"]["Enums"]["exam_type"]
+          exam_year?: number
+          id?: string
+          opening_marks?: number | null
+          opening_rank?: number | null
+          round_number?: number | null
+          state_quota?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_cutoffs_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_assessments: {
+        Row: {
+          accommodation_preference: string
+          additional_info: string | null
+          budget_range: string
+          category: Database["public"]["Enums"]["category_type"]
+          climate_preference: string | null
+          college_type_preference: string
+          created_at: string
+          domicile_state: string
+          exam_name: Database["public"]["Enums"]["exam_type"]
+          exam_year: number
+          gender: Database["public"]["Enums"]["gender_type"]
+          id: string
+          language_preference: string | null
+          marks: number
+          religious_practices: string | null
+          safety_priority_score: number | null
+          special_needs: string | null
+          total_marks: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accommodation_preference: string
+          additional_info?: string | null
+          budget_range: string
+          category: Database["public"]["Enums"]["category_type"]
+          climate_preference?: string | null
+          college_type_preference: string
+          created_at?: string
+          domicile_state: string
+          exam_name: Database["public"]["Enums"]["exam_type"]
+          exam_year: number
+          gender: Database["public"]["Enums"]["gender_type"]
+          id?: string
+          language_preference?: string | null
+          marks: number
+          religious_practices?: string | null
+          safety_priority_score?: number | null
+          special_needs?: string | null
+          total_marks: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accommodation_preference?: string
+          additional_info?: string | null
+          budget_range?: string
+          category?: Database["public"]["Enums"]["category_type"]
+          climate_preference?: string | null
+          college_type_preference?: string
+          created_at?: string
+          domicile_state?: string
+          exam_name?: Database["public"]["Enums"]["exam_type"]
+          exam_year?: number
+          gender?: Database["public"]["Enums"]["gender_type"]
+          id?: string
+          language_preference?: string | null
+          marks?: number
+          religious_practices?: string | null
+          safety_priority_score?: number | null
+          special_needs?: string | null
+          total_marks?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +274,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      category_type: "general" | "obc" | "sc" | "st" | "ews" | "pwd"
+      college_type: "government" | "semi-government" | "private" | "deemed"
+      exam_type: "neet-ug" | "jee-main" | "jee-advanced"
+      gender_type: "male" | "female" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +392,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category_type: ["general", "obc", "sc", "st", "ews", "pwd"],
+      college_type: ["government", "semi-government", "private", "deemed"],
+      exam_type: ["neet-ug", "jee-main", "jee-advanced"],
+      gender_type: ["male", "female", "other"],
+    },
   },
 } as const
