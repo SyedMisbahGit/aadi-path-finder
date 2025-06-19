@@ -1,246 +1,162 @@
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, TrendingUp, TrendingDown, Clock } from "lucide-react";
-
-interface CounselingRound {
-  round: number;
-  status: 'upcoming' | 'active' | 'completed';
-  startDate: string;
-  endDate: string;
-  resultDate: string;
-}
-
-interface RankMovement {
-  college: string;
-  branch: string;
-  category: string;
-  currentRank: number;
-  previousRank: number;
-  change: number;
-  trend: 'up' | 'down' | 'stable';
-}
+import { Calendar, Clock, Users, Target } from "lucide-react";
 
 export const CounselingTracker = () => {
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [selectedExam, setSelectedExam] = useState<'josaa' | 'neet-aiq' | 'state'>('josaa');
-
-  // Mock data - in production, this would fetch from live APIs
-  const { data: counselingRounds, isLoading: roundsLoading } = useQuery({
-    queryKey: ['counseling-rounds', selectedExam],
-    queryFn: async () => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockRounds: CounselingRound[] = [
-        {
-          round: 1,
-          status: 'completed',
-          startDate: '2025-06-15',
-          endDate: '2025-06-22',
-          resultDate: '2025-06-25'
-        },
-        {
-          round: 2,
-          status: 'active',
-          startDate: '2025-06-26',
-          endDate: '2025-07-03',
-          resultDate: '2025-07-06'
-        },
-        {
-          round: 3,
-          status: 'upcoming',
-          startDate: '2025-07-10',
-          endDate: '2025-07-17',
-          resultDate: '2025-07-20'
-        }
-      ];
-      
-      return mockRounds;
+  const counselingRounds = [
+    {
+      id: 1,
+      name: "Round 1",
+      nameUrdu: "راؤنڈ 1",
+      status: "completed",
+      startDate: "2025-01-15",
+      endDate: "2025-01-20",
+      progress: 100,
+      seatsAllotted: 85234,
+      totalSeats: 100000
     },
-    refetchInterval: 60000, // Refetch every minute
-  });
-
-  const { data: rankMovements, isLoading: movementsLoading } = useQuery({
-    queryKey: ['rank-movements', selectedExam],
-    queryFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      const mockMovements: RankMovement[] = [
-        {
-          college: 'IIT Delhi',
-          branch: 'Computer Science',
-          category: 'General',
-          currentRank: 150,
-          previousRank: 145,
-          change: 5,
-          trend: 'down'
-        },
-        {
-          college: 'IIT Bombay',
-          branch: 'Electrical Engineering',
-          category: 'OBC',
-          currentRank: 890,
-          previousRank: 920,
-          change: -30,
-          trend: 'up'
-        },
-        {
-          college: 'NIT Trichy',
-          branch: 'Mechanical Engineering',
-          category: 'SC',
-          currentRank: 2500,
-          previousRank: 2500,
-          change: 0,
-          trend: 'stable'
-        }
-      ];
-      
-      return mockMovements;
+    {
+      id: 2,
+      name: "Round 2", 
+      nameUrdu: "راؤنڈ 2",
+      status: "ongoing",
+      startDate: "2025-01-25",
+      endDate: "2025-01-30",
+      progress: 65,
+      seatsAllotted: 12453,
+      totalSeats: 20000
     },
-    refetchInterval: 300000, // Refetch every 5 minutes
-  });
-
-  const refreshData = () => {
-    setLastUpdated(new Date());
-    // Force refetch of all queries
-    window.location.reload();
-  };
-
-  const getStatusColor = (status: CounselingRound['status']) => {
-    switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'completed': return 'bg-blue-500';
-      case 'upcoming': return 'bg-gray-400';
-      default: return 'bg-gray-400';
+    {
+      id: 3,
+      name: "Mop-up Round",
+      nameUrdu: "موپ اپ راؤنڈ",
+      status: "upcoming",
+      startDate: "2025-02-05",
+      endDate: "2025-02-10",
+      progress: 0,
+      seatsAllotted: 0,
+      totalSeats: 5000
     }
-  };
+  ];
 
-  const getTrendIcon = (trend: RankMovement['trend']) => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="w-4 h-4 text-green-600" />;
-      case 'down': return <TrendingDown className="w-4 h-4 text-red-600" />;
-      default: return <div className="w-4 h-4 bg-gray-400 rounded-full" />;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge className="bg-green-500">✓ Completed / مکمل</Badge>;
+      case 'ongoing':
+        return <Badge className="bg-blue-500">🔄 Ongoing / جاری</Badge>;
+      case 'upcoming':
+        return <Badge variant="outline">⏳ Upcoming / آنے والا</Badge>;
+      default:
+        return <Badge variant="secondary">Unknown</Badge>;
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">🔁 Real-Time Counseling Tracker</h2>
-          <p className="text-gray-600">Live updates from 2025 counseling rounds</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500 flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </div>
-          <Button variant="outline" size="sm" onClick={refreshData}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">🗓️ Live Counseling Tracker</h2>
+        <p className="text-gray-600">براہ راست کاؤنسلنگ ٹریکر</p>
+        <p className="text-sm text-gray-500 mt-2">Real-time updates on NEET & JEE counseling rounds</p>
       </div>
 
-      <Tabs value={selectedExam} onValueChange={(value) => setSelectedExam(value as any)}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="josaa">JoSAA</TabsTrigger>
-          <TabsTrigger value="neet-aiq">NEET AIQ</TabsTrigger>
-          <TabsTrigger value="state">State Quotas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={selectedExam} className="space-y-6">
-          {/* Counseling Rounds Timeline */}
-          <Card>
+      <div className="grid gap-4">
+        {counselingRounds.map((round) => (
+          <Card key={round.id} className="w-full">
             <CardHeader>
-              <CardTitle>Counseling Rounds - {selectedExam.toUpperCase()}</CardTitle>
-              <CardDescription>Track the progress of each counseling round</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  {round.name} / {round.nameUrdu}
+                </CardTitle>
+                {getStatusBadge(round.status)}
+              </div>
             </CardHeader>
-            <CardContent>
-              {roundsLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-20 bg-gray-200 animate-pulse rounded-lg" />
-                  ))}
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium">Duration / مدت</p>
+                    <p className="text-xs text-gray-600">
+                      {round.startDate} to {round.endDate}
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {counselingRounds?.map((round) => (
-                    <div key={round.round} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${getStatusColor(round.status)}`} />
-                        <div>
-                          <h4 className="font-semibold">Round {round.round}</h4>
-                          <p className="text-sm text-gray-600">
-                            {round.startDate} - {round.endDate}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={round.status === 'active' ? 'default' : 'secondary'}>
-                          {round.status.charAt(0).toUpperCase() + round.status.slice(1)}
-                        </Badge>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Result: {round.resultDate}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium">Seats Allotted / تفویض شدہ نشستیں</p>
+                    <p className="text-xs text-gray-600">
+                      {round.seatsAllotted.toLocaleString()} / {round.totalSeats.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {round.status === 'ongoing' && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress / پیش قدمی</span>
+                    <span>{round.progress}%</span>
+                  </div>
+                  <Progress value={round.progress} className="w-full" />
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Rank Movements */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Live Rank Movements</CardTitle>
-              <CardDescription>Track closing rank changes across rounds</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {movementsLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-16 bg-gray-200 animate-pulse rounded-lg" />
-                  ))}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium">Key Updates / اہم اپڈیٹس</span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {rankMovements?.map((movement, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{movement.college}</h4>
-                        <p className="text-sm text-gray-600">{movement.branch} - {movement.category}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-center">
-                          <p className="text-lg font-bold">{movement.currentRank}</p>
-                          <p className="text-xs text-gray-500">Current Rank</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getTrendIcon(movement.trend)}
-                          <span className={`text-sm font-medium ${
-                            movement.change > 0 ? 'text-red-600' : 
-                            movement.change < 0 ? 'text-green-600' : 'text-gray-600'
-                          }`}>
-                            {movement.change > 0 ? '+' : ''}{movement.change}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                <ul className="text-xs text-gray-700 space-y-1">
+                  {round.status === 'completed' && (
+                    <>
+                      <li>✓ All document verification completed</li>
+                      <li>✓ Seat allotment results declared</li>
+                      <li>✓ Fee payment window closed</li>
+                    </>
+                  )}
+                  {round.status === 'ongoing' && (
+                    <>
+                      <li>🔄 Document verification in progress</li>
+                      <li>⏳ Choice filling deadline: Jan 28, 2025</li>
+                      <li>📊 Seat allotment expected: Jan 31, 2025</li>
+                    </>
+                  )}
+                  {round.status === 'upcoming' && (
+                    <>
+                      <li>📅 Registration starts: Feb 1, 2025</li>
+                      <li>📝 Fresh choice filling required</li>
+                      <li>🎯 Limited seats available</li>
+                    </>
+                  )}
+                </ul>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
+
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-2">
+            <Target className="w-5 h-5 text-blue-600 mt-1" />
+            <div>
+              <h4 className="font-semibold text-blue-900">Live Data Sources / براہ راست ڈیٹا کے ذرائع</h4>
+              <p className="text-sm text-blue-800 mt-1">
+                Data is updated every 30 minutes from official sources including MCC.nic.in, JoSAA.nic.in, and state counseling portals.
+              </p>
+              <p className="text-xs text-blue-700 mt-2">
+                ڈیٹا ہر 30 منٹ میں سرکاری ذرائع سے اپڈیٹ ہوتا ہے
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

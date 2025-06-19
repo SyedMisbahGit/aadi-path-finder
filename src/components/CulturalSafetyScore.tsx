@@ -55,11 +55,12 @@ export const CulturalSafetyScore = ({ collegeId, collegeName, safetyData }: Cult
         <CardTitle className="flex items-center gap-2 text-lg">
           <Shield className="w-5 h-5" />
           Cultural & Safety Assessment
+          <span className="text-sm text-gray-500">ثقافتی اور حفاظتی جائزہ</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Overall Score */}
-        <div className={`p-4 rounded-lg border ${getScoreColor(mockSa.overallScore)}`}>
+        <div className={`p-4 rounded-lg border ${getScoreColor(mockSafetyData.overallScore)}`}>
           <div className="flex items-center justify-between">
             <span className="font-semibold">Overall Safety Score</span>
             <div className="flex items-center gap-2">
@@ -108,7 +109,7 @@ export const CulturalSafetyScore = ({ collegeId, collegeName, safetyData }: Cult
 
         {/* Student Reviews */}
         <div>
-          <h4 className="font-semibold mb-2">What Students Say:</h4>
+          <h4 className="font-semibold mb-2">What Students Say / طلباء کیا کہتے ہیں:</h4>
           <div className="space-y-2">
             {mockSafetyData.reviews.map((review, index) => (
               <div key={index} className="text-sm bg-gray-50 p-2 rounded border-l-4 border-blue-200">
@@ -120,11 +121,11 @@ export const CulturalSafetyScore = ({ collegeId, collegeName, safetyData }: Cult
 
         {/* Cultural Compatibility */}
         <div className="bg-blue-50 p-3 rounded-lg">
-          <h4 className="font-semibold text-blue-900 mb-1">Cultural Compatibility</h4>
+          <h4 className="font-semibold text-blue-900 mb-1">Cultural Compatibility / ثقافتی مطابقت</h4>
           <p className="text-sm text-blue-800">
             {mockSafetyData.minorityFriendly && mockSafetyData.culturalInclusive
-              ? "✅ This college has a welcoming environment for students from all backgrounds and religious practices."
-              : "⚠️ Limited information available about cultural inclusivity. We recommend contacting the college directly."}
+              ? "✅ This college has a welcoming environment for students from all backgrounds and religious practices. / یہ کالج تمام پس منظر اور مذہبی طریقوں کے طلباء کے لیے خوش آمدید ماحول رکھتا ہے۔"
+              : "⚠️ Limited information available about cultural inclusivity. We recommend contacting the college directly. / ثقافتی شمولیت کے بارے میں محدود معلومات دستیاب ہیں۔"}
           </p>
         </div>
       </CardContent>

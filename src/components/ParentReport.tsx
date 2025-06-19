@@ -14,7 +14,7 @@ interface ParentReportProps {
 }
 
 export const ParentReport = ({ recommendations, studentData }: ParentReportProps) => {
-  const [language, setLanguage] = useState<'english' | 'hindi' | 'bilingual'>('bilingual');
+  const [language, setLanguage] = useState<'english' | 'hindi' | 'urdu' | 'bilingual'>('bilingual');
   const [studentName, setStudentName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -40,6 +40,10 @@ export const ParentReport = ({ recommendations, studentData }: ParentReportProps
         downloadReport(reportContent.hindi, `${studentName}_College_Report_HI.pdf`);
       }
 
+      if (language === 'urdu') {
+        downloadReport(reportContent.urdu, `${studentName}_College_Report_UR.pdf`);
+      }
+
       toast.success("Parent report generated successfully!");
     } catch (error) {
       toast.error("Failed to generate report. Please try again.");
@@ -51,8 +55,7 @@ export const ParentReport = ({ recommendations, studentData }: ParentReportProps
   const generateReportContent = () => {
     const topRecommendations = recommendations.slice(0, 10);
     
-    const englishContent = `
-🤖 AL-NASEEH COLLEGE COUNSELING REPORT
+    const englishContent = `🤖 AL-NASEEH COLLEGE COUNSELING REPORT
 الناصح - Your Honest AI Advisor
 
 STUDENT INFORMATION:
@@ -64,15 +67,13 @@ State: ${studentData?.domicileState || 'N/A'}
 
 TOP COLLEGE RECOMMENDATIONS:
 
-${topRecommendations.map((rec, index) => `
-${index + 1}. ${rec.collegeName || 'College Name'}
+${topRecommendations.map((rec, index) => `${index + 1}. ${rec.collegeName || 'College Name'}
    📍 Location: ${rec.location || 'Location'}
    💰 Annual Fees: ₹${rec.fees || '50,000'} - ₹${rec.maxFees || '1,00,000'}
    🎯 Admission Chance: ${rec.probability || '75'}%
    🛡️ Safety Score: ${rec.safetyScore || '8'}/10
    🏠 Hostel: ${rec.hostelAvailable ? 'Available' : 'Not Available'}
-   💰 Total Cost (4 years): ₹${rec.totalCost || '4,00,000'}
-`).join('')}
+   💰 Total Cost (4 years): ₹${rec.totalCost || '4,00,000'}`).join('\n\n')}
 
 IMPORTANT NOTES FOR PARENTS:
 ✅ All colleges listed are accredited and recognized
@@ -81,31 +82,27 @@ IMPORTANT NOTES FOR PARENTS:
 ✅ Cultural compatibility considered for minority students
 
 For more information, visit: https://your-platform.com
-Generated on: ${new Date().toLocaleDateString()}
-    `;
+Generated on: ${new Date().toLocaleDateString()}`;
 
-    const hindiContent = `
-🤖 अल-नासीह कॉलेज काउंसलिंग रिपोर्ट
+    const hindiContent = `🤖 अल-नासीह कॉलेज काउंसलिंग रिपोर्ट
 الناصح - आपका ईमानदार AI सलाहकार
 
 छात्र की जानकारी:
 नाम: ${studentName}
 परीक्षा: ${studentData?.examName || 'NEET 2025'}
-अंक: ${studentData?.marks या 'N/A'}
+अंक: ${studentData?.marks || 'N/A'}
 श्रेणी: ${studentData?.category || 'N/A'}
 राज्य: ${studentData?.domicileState || 'N/A'}
 
 शीर्ष कॉलेज सिफारिशें:
 
-${topRecommendations.map((rec, index) => `
-${index + 1}. ${rec.collegeName || 'कॉलेज का नाम'}
+${topRecommendations.map((rec, index) => `${index + 1}. ${rec.collegeName || 'कॉलेज का नाम'}
    📍 स्थान: ${rec.location || 'स्थान'}
    💰 वार्षिक फीस: ₹${rec.fees || '50,000'} - ₹${rec.maxFees || '1,00,000'}
    🎯 प्रवेश की संभावना: ${rec.probability || '75'}%
    🛡️ सुरक्षा स्कोर: ${rec.safetyScore || '8'}/10
    🏠 हॉस्टल: ${rec.hostelAvailable ? 'उपलब्ध' : 'उपलब्ध नहीं'}
-   💰 कुल लागत (4 साल): ₹${rec.totalCost || '4,00,000'}
-`).join('')}
+   💰 कुल लागत (4 साल): ₹${rec.totalCost || '4,00,000'}`).join('\n\n')}
 
 माता-पिता के लिए महत्वपूर्ण नोट्स:
 ✅ सभी सूचीबद्ध कॉलेज मान्यता प्राप्त और पहचाने गए हैं
@@ -114,10 +111,38 @@ ${index + 1}. ${rec.collegeName || 'कॉलेज का नाम'}
 ✅ अल्पसंख्यक छात्रों के लिए सांस्कृतिक संगतता पर विचार
 
 अधिक जानकारी के लिए देखें: https://your-platform.com
-बनाया गया: ${new Date().toLocaleDateString()}
-    `;
+बनाया गया: ${new Date().toLocaleDateString()}`;
 
-    return { english: englishContent, hindi: hindiContent };
+    const urduContent = `🤖 الناصح کالج کاؤنسلنگ رپورٹ
+الناصح - آپ کا ایمانداR AI مشیر
+
+طالب علم کی معلومات:
+نام: ${studentName}
+امتحان: ${studentData?.examName || 'NEET 2025'}
+نمبر: ${studentData?.marks || 'N/A'}
+کیٹگری: ${studentData?.category || 'N/A'}
+ریاست: ${studentData?.domicileState || 'N/A'}
+
+اعلیٰ کالج تجاویز:
+
+${topRecommendations.map((rec, index) => `${index + 1}. ${rec.collegeName || 'کالج کا نام'}
+   📍 مقام: ${rec.location || 'مقام'}
+   💰 سالانہ فیس: ₹${rec.fees || '50,000'} - ₹${rec.maxFees || '1,00,000'}
+   🎯 داخلے کا امکان: ${rec.probability || '75'}%
+   🛡️ سیفٹی سکور: ${rec.safetyScore || '8'}/10
+   🏠 ہاسٹل: ${rec.hostelAvailable ? 'دستیاب' : 'دستیاب نہیں'}
+   💰 کل لاگت (4 سال): ₹${rec.totalCost || '4,00,000'}`).join('\n\n')}
+
+والدین کے لیے اہم نوٹس:
+✅ تمام درج کالجز تسلیم شدہ اور منظور شدہ ہیں
+✅ سیفٹی سکور کیمپس سیکیورٹی، شہر کی جرائم کی شرح اور طلباء کے جائزوں پر مبنی
+✅ لاگت کا تخمینہ ٹیوشن، ہاسٹل اور بنیادی رہائش کے اخراجات شامل
+✅ اقلیتی طلباء کے لیے ثقافتی مطابقت کا خیال
+
+مزید معلومات کے لیے ملاحظہ کریں: https://your-platform.com
+تیار کردہ: ${new Date().toLocaleDateString()}`;
+
+    return { english: englishContent, hindi: hindiContent, urdu: urduContent };
   };
 
   const downloadReport = (content: string, filename: string) => {
@@ -135,14 +160,13 @@ ${index + 1}. ${rec.collegeName || 'कॉलेज का नाम'}
   const shareViaWhatsApp = () => {
     const message = `🤖 *AL-NASEEH COLLEGE REPORT* 
 
-मेरे बच्चे ${studentName} के लिए कॉलेज की सिफारिश:
+میرے بچے ${studentName} کے لیے کالج کی سفارش:
 
-${recommendations.slice(0, 3).map((rec, index) => `
-${index + 1}. ${rec.collegeName || 'College'} - ${rec.location || 'Location'}
-   प्रवेश संभावना: ${rec.probability || '75'}%
-   सुरक्षा स्कोर: ${rec.safetyScore || '8'}/10`).join('')}
+${recommendations.slice(0, 3).map((rec, index) => `${index + 1}. ${rec.collegeName || 'College'} - ${rec.location || 'Location'}
+   داخلے کا امکان: ${rec.probability || '75'}%
+   سیفٹی سکور: ${rec.safetyScore || '8'}/10`).join('\n\n')}
 
-Al-Naseeh AI से पूरी रिपोर्ट: [Link]`;
+Al-Naseeh AI سے مکمل رپورٹ: [Link]`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -154,45 +178,47 @@ Al-Naseeh AI से पूरी रिपोर्ट: [Link]`;
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
           Parent-Friendly Report
+          <span className="text-sm text-gray-500">والدین کے لیے رپورٹ</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="studentName">Student Name</Label>
+            <Label htmlFor="studentName">Student Name / طالب علم کا نام</Label>
             <Input
               id="studentName"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
-              placeholder="Enter student's name"
+              placeholder="Enter student's name / طالب علم کا نام درج کریں"
               className="mt-1"
             />
           </div>
           
           <div>
-            <Label htmlFor="language">Report Language</Label>
+            <Label htmlFor="language">Report Language / رپورٹ کی زبان</Label>
             <Select value={language} onValueChange={(value: any) => setLanguage(value)}>
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="english">English Only</SelectItem>
-                <SelectItem value="hindi">Hindi Only</SelectItem>
-                <SelectItem value="bilingual">Both (Bilingual)</SelectItem>
+                <SelectItem value="hindi">Hindi Only / ہندی</SelectItem>
+                <SelectItem value="urdu">Urdu Only / اردو</SelectItem>
+                <SelectItem value="bilingual">Bilingual / دو زبانی</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-900 mb-2">Report will include:</h4>
+          <h4 className="font-semibold text-blue-900 mb-2">Report will include / رپورٹ میں شامل:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>✓ Top 10 college recommendations</li>
-            <li>✓ Safety scores for each college</li>
-            <li>✓ Cost breakdown (fees + living expenses)</li>
-            <li>✓ Admission probability for each option</li>
-            <li>✓ Hostel and facility information</li>
-            <li>✓ Cultural compatibility notes</li>
+            <li>✓ Top 10 college recommendations / ٹاپ 10 کالج تجاویز</li>
+            <li>✓ Safety scores for each college / ہر کالج کے لیے سیفٹی سکور</li>
+            <li>✓ Cost breakdown (fees + living expenses) / لاگت کی تفصیل</li>
+            <li>✓ Admission probability for each option / ہر آپشن کے لیے داخلے کا امکان</li>
+            <li>✓ Hostel and facility information / ہاسٹل اور سہولات کی معلومات</li>
+            <li>✓ Cultural compatibility notes / ثقافتی مطابقت کے نوٹس</li>
           </ul>
         </div>
 
@@ -203,11 +229,11 @@ Al-Naseeh AI से पूरी रिपोर्ट: [Link]`;
             className="flex-1"
           >
             {isGenerating ? (
-              "Generating Report..."
+              "Generating Report... / رپورٹ تیار کی جا رہی ہے"
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                Download Report
+                Download Report / رپورٹ ڈاون لوڈ کریں
               </>
             )}
           </Button>
