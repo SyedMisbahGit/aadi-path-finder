@@ -108,9 +108,7 @@ export const ExportRecommendations = ({ recommendations, assessmentData }: Expor
       } 
       
       else if (exportFormat === 'xlsx') {
-        // For XLSX, we'll create a more structured format
         const csvContent = generateCSV(recommendations);
-        // In a real implementation, you'd use a library like xlsx or exceljs
         downloadFile(
           csvContent,
           `college_recommendations${examInfo}_${timestamp}.xlsx`,
@@ -120,8 +118,6 @@ export const ExportRecommendations = ({ recommendations, assessmentData }: Expor
       }
       
       else if (exportFormat === 'sheets') {
-        // Google Sheets integration would require OAuth setup
-        // For now, we'll copy to clipboard with instructions
         const csvContent = generateCSV(recommendations);
         await navigator.clipboard.writeText(csvContent);
         toast.success("Data copied to clipboard! Paste it into Google Sheets.");
@@ -184,7 +180,7 @@ export const ExportRecommendations = ({ recommendations, assessmentData }: Expor
                 <Checkbox 
                   id="details" 
                   checked={includeDetails}
-                  onCheckedChange={setIncludeDetails}
+                  onCheckedChange={(checked) => setIncludeDetails(checked === true)}
                 />
                 <label htmlFor="details" className="text-sm">
                   College details & scores
@@ -194,7 +190,7 @@ export const ExportRecommendations = ({ recommendations, assessmentData }: Expor
                 <Checkbox 
                   id="analysis" 
                   checked={includeAnalysis}
-                  onCheckedChange={setIncludeAnalysis}
+                  onCheckedChange={(checked) => setIncludeAnalysis(checked === true)}
                 />
                 <label htmlFor="analysis" className="text-sm">
                   AI analysis & reasoning
