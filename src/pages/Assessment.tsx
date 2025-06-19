@@ -1,9 +1,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, Car nentCardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, RotateCcw, Download, Map, Calendar, Calculator } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssessment } from "@/hooks/useAssessment";
@@ -15,31 +15,54 @@ import { AdmissionTimeline } from "@/components/AdmissionTimeline";
 import { SimulationMode } from "@/components/SimulationMode";
 import { NEETAssessmentForm } from "@/components/NEETAssessmentForm";
 import { NEETRecommendations } from "@/components/NEETRecommendations";
+import { JEEMainAssessmentForm } from "@/components/JEEMainAssessmentForm";
+import { JEEAdvancedAssessmentForm } from "@/components/JEEAdvancedAssessmentForm";
+import { ExamSelectionGateway } from "@/components/ExamSelectionGateway";
 import { toast } from "sonner";
 
 const Assessment = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [submittedAssessmentId, setSubmittedAssessmentId] = useState<string | null>(null);
+  const [selectedExams, setSelectedExams] = useState<string[]>([]);
+  const [activeExamTab, setActiveExamTab] = useState<string>('');
   const [activeTab, setActiveTab] = useState('assessment');
-  const [examType, setExamType] = useState<'neet' | 'jee' | null>(null);
-  const [assessmentData, setAssessmentData] = useState<any>(null);
+  const [assessmentData, setAssessmentData] = useState<any>({});
+  const [submittedAssessments, setSubmittedAssessments] = useState<Record<string, string>>({});
   const { user } = useAuth();
   const { saveAssessment, clearLocalData, loadAssessmentFromLocal } = useAssessment();
 
   useState(() => {
-    const savedAssessment = loadAssessmentFromLocal();
-    if (savedAssessment && Object.keys(savedAssessment).length > 2) {
-      setAssessmentData(savedAssessment);
-      if (savedAssessment.examName) {
-        setExamType(savedAssessment.examName.includes('neet') ? 'neet' : 'jee');
+    const savedData = loadAssessmentFromLocal();
+    if (savedData && Object.keys(savedData).length > 2) {
+      // Load previous session data
+      const examTypes = [];
+      if (savedData.neet) {
+        examTypes.push('neet-ug');
+        setAssessmentData(prev => ({ ...prev, 'neet-ug': savedData.neet }));
       }
-      toast.info("Previous session data loaded");
+      if (savedData.jeeMain) {
+        examTypes.push('jee-main');
+        setAssessmentData(prev => ({ ...prev, 'jee-main': savedData.jeeMain }));
+      }
+      if (savedData.jeeAdvanced) {
+        examTypes.push('jee-advanced');
+        setAssessmentData(prev => ({ ...prev, 'jee-advanced': savedData.jeeAdvanced }));
+      }
+      
+      if (examTypes.length > 0) {
+        setSelectedExams(examTypes);
+        setActiveExamTab(examTypes[0]);
+        toast.info("Previous session data loaded");
+      }
     }
   });
 
+  const handleExamSelect = (exams: string[]) => {
+    setSelectedExams(exams);
+    setActiveExamTab(exams[0]);
+  };
+
   const handleNEETSubmit = async (data: any) => {
     try {
-      setAssessmentData(data);
       const result = await saveAssessment.mutateAsync({
         examName: 'neet-ug',
         examYear: '2025',
@@ -59,7 +82,8 @@ const Assessment = () => {
         additionalInfo: data.additionalInfo
       });
       
-      setSubmittedAssessmentId(result.id || 'local-neet-assessment');
+      setAssessmentData(prev => ({ ...prev, 'neet-ug': data }));
+      setSubmittedAssessments(prev => ({ ...prev, 'neet-ug': result.id || 'local-neet' }));
       setActiveTab('recommendations');
       toast.success("NEET assessment completed! Al-Naseeh is analyzing your options...");
     } catch (error) {
@@ -68,75 +92,162 @@ const Assessment = () => {
     }
   };
 
+  const handleJEEMainSubmit = async (data: any) => {
+    try {
+      const result = await saveAssessment.mutateAsync({
+        examName: 'jee-main',
+        examYear: '2025',
+        marks: data.jeeMainPercentile,
+        totalMarks: '100',
+        category: data.category,
+        gender: data.gender,
+        domicileState: data.homeState,
+        preferredStates: [data.homeState],
+        budgetRange: data.budgetRange,
+        hostOrDay: 'both',
+        religiousPractices: '',
+        specialNeeds: '',
+        collegeType: data.collegeTypePreference,
+        climatePreference: 'no-preference',
+        languagePreference: data.languagePreference,
+        additionalInfo: data.additionalInfo
+      });
+      
+      setAssessmentData(prev => ({ ...prev, 'jee-main': data }));
+      setSubmittedAssessments(prev => ({ ...prev, 'jee-main': result.id || 'local-jee-main' }));
+      setActiveTab('recommendations');
+      toast.success("JEE Main assessment completed! Al-Naseeh is analyzing your engineering options...");
+    } catch (error) {
+      console.error('Error submitting JEE Main assessment:', error);
+      toast.error("Failed to save assessment. Please try again.");
+    }
+  };
+
+  const handleJEEAdvancedSubmit = async (data: any) => {
+    try {
+      const result = await saveAssessment.mutateAsync({
+        examName: 'jee-advanced',
+        examYear: '2025',
+        marks: data.jeeAdvancedRank,
+        totalMarks: '50000',
+        category: data.category,
+        gender: data.gender,
+        domicileState: 'all-india',
+        preferredStates: [],
+        budgetRange: data.budgetRange,
+        hostOrDay: data.hostelPreference,
+        religiousPractices: '',
+        specialNeeds: '',
+        collegeType: 'iit',
+        climatePreference: 'no-preference',
+        languagePreference: data.languagePreference,
+        additionalInfo: data.additionalInfo
+      });
+      
+      setAssessmentData(prev => ({ ...prev, 'jee-advanced': data }));
+      setSubmittedAssessments(prev => ({ ...prev, 'jee-advanced': result.id || 'local-jee-advanced' }));
+      setActiveTab('recommendations');
+      toast.success("JEE Advanced assessment completed! Al-Naseeh is analyzing your IIT options...");
+    } catch (error) {
+      console.error('Error submitting JEE Advanced assessment:', error);
+      toast.error("Failed to save assessment. Please try again.");
+    }
+  };
+
   const resetSession = () => {
     clearLocalData();
-    setAssessmentData(null);
-    setExamType(null);
-    setSubmittedAssessmentId(null);
+    setAssessmentData({});
+    setSelectedExams([]);
+    setActiveExamTab('');
+    setSubmittedAssessments({});
     setActiveTab('assessment');
     toast.success("Session reset successfully!");
   };
 
-  const ExamTypeSelection = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">🤖 Welcome to Al-Naseeh</h2>
-        <p className="text-gray-600 mb-6">Your honest AI advisor for medical and engineering college counseling</p>
-      </div>
-      
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500"
-          onClick={() => setExamType('neet')}
-        >
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              🩺 NEET 2025
-            </CardTitle>
-            <CardDescription>
-              Medical & Dental College Counseling
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm space-y-2">
-              <li>• MBBS, BDS, AYUSH colleges</li>
-              <li>• AIQ, State, Deemed university options</li>
-              <li>• Real-time MCC counseling updates</li>
-              <li>• NEET-specific quota calculations</li>
-            </ul>
-          </CardContent>
-        </Card>
+  const renderAssessmentForm = () => {
+    switch (activeExamTab) {
+      case 'neet-ug':
+        return (
+          <NEETAssessmentForm 
+            onSubmit={handleNEETSubmit}
+            isSubmitting={saveAssessment.isPending}
+          />
+        );
+      case 'jee-main':
+        return (
+          <JEEMainAssessmentForm 
+            onSubmit={handleJEEMainSubmit}
+            isSubmitting={saveAssessment.isPending}
+          />
+        );
+      case 'jee-advanced':
+        return (
+          <JEEAdvancedAssessmentForm 
+            onSubmit={handleJEEAdvancedSubmit}
+            isSubmitting={saveAssessment.isPending}
+          />
+        );
+      default:
+        return (
+          <Card>
+            <CardContent className="text-center py-12">
+              <p className="text-gray-500 mb-4">Please select an exam to begin assessment</p>
+              <Button onClick={() => setSelectedExams([])}>
+                Choose Exam
+              </Button>
+            </CardContent>
+          </Card>
+        );
+    }
+  };
 
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-500"
-          onClick={() => setExamType('jee')}
-        >
-          <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2">
-              ⚙️ JEE 2025
-            </CardTitle>
-            <CardDescription>
-              Engineering College Counseling
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm space-y-2">
-              <li>• IIT, NIT, IIIT colleges</li>
-              <li>• JoSAA counseling tracker</li>
-              <li>• Branch and specialization guidance</li>
-              <li>• State quota engineering options</li>
-            </ul>
+  const renderRecommendations = () => {
+    const currentAssessmentData = assessmentData[activeExamTab];
+    const currentAssessmentId = submittedAssessments[activeExamTab];
+    
+    if (!currentAssessmentData || !currentAssessmentId) {
+      return (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-gray-500 mb-4">Complete your assessment first to see personalized recommendations</p>
+            <Button onClick={() => setActiveTab('assessment')}>
+              Go to Assessment
+            </Button>
           </CardContent>
         </Card>
+      );
+    }
+
+    switch (activeExamTab) {
+      case 'neet-ug':
+        return <NEETRecommendations assessmentData={currentAssessmentData} />;
+      case 'jee-main':
+      case 'jee-advanced':
+        return <AIRecommendations assessmentId={currentAssessmentId} />;
+      default:
+        return null;
+    }
+  };
+
+  if (selectedExams.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-800">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+          </div>
+          
+          <ExamSelectionGateway 
+            onExamSelect={handleExamSelect}
+            selectedExams={selectedExams}
+          />
+        </div>
       </div>
-      
-      <div className="bg-blue-50 p-4 rounded-lg text-center">
-        <p className="text-sm text-blue-800">
-          ✨ <strong>No signup required!</strong> Your data stays private and is stored locally on your device.
-        </p>
-      </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 py-8">
@@ -167,78 +278,65 @@ const Assessment = () => {
           </div>
         </div>
 
-        {!examType ? (
-          <ExamTypeSelection />
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="assessment">Assessment</TabsTrigger>
-              <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-              <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="simulation">Simulation</TabsTrigger>
-              <TabsTrigger value="export">Export</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="assessment" className="space-y-6">
-              {examType === 'neet' ? (
-                <NEETAssessmentForm 
-                  onSubmit={handleNEETSubmit}
-                  isSubmitting={saveAssessment.isPending}
-                />
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <p className="text-gray-500 mb-4">JEE assessment form coming soon!</p>
-                    <Button onClick={() => setExamType(null)}>
-                      Choose Different Exam
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="recommendations">
-              {submittedAssessmentId && assessmentData ? (
-                examType === 'neet' ? (
-                  <NEETRecommendations assessmentData={assessmentData} />
-                ) : (
-                  <AIRecommendations assessmentId={submittedAssessmentId} />
-                )
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <p className="text-gray-500 mb-4">Complete your assessment first to see personalized recommendations</p>
-                    <Button onClick={() => setActiveTab('assessment')}>
-                      Go to Assessment
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="tracker">
-              <CounselingTracker />
-            </TabsContent>
-
-            <TabsContent value="timeline">
-              <AdmissionTimeline />
-            </TabsContent>
-
-            <TabsContent value="simulation">
-              <SimulationMode />
-            </TabsContent>
-
-            <TabsContent value="export">
-              <ExportRecommendations 
-                recommendations={[]}
-                assessmentData={assessmentData}
-              />
-            </TabsContent>
-          </Tabs>
+        {/* Exam Selection Tabs */}
+        {selectedExams.length > 1 && (
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              {selectedExams.map(exam => (
+                <Button
+                  key={exam}
+                  variant={activeExamTab === exam ? "default" : "outline"}
+                  onClick={() => setActiveExamTab(exam)}
+                  className="capitalize"
+                >
+                  {exam === 'neet-ug' && '🩺 NEET UG'}
+                  {exam === 'jee-main' && '⚙️ JEE Main'}
+                  {exam === 'jee-advanced' && '⚡ JEE Advanced'}
+                </Button>
+              ))}
+            </div>
+          </div>
         )}
 
-        <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="assessment">Assessment</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="simulation">Simulation</TabsTrigger>
+            <TabsTrigger value="export">Export</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assessment" className="space-y-6">
+            {renderAssessmentForm()}
+          </TabsContent>
+
+          <TabsContent value="recommendations">
+            {renderRecommendations()}
+          </TabsContent>
+
+          <TabsContent value="tracker">
+            <CounselingTracker />
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <AdmissionTimeline />
+          </TabsContent>
+
+          <TabsContent value="simulation">
+            <SimulationMode />
+          </TabsContent>
+
+          <TabsContent value="export">
+            <ExportRecommendations 
+              recommendations={[]}
+              assessmentData={assessmentData[activeExamTab]}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <AuthModal open={showAuthModal} onOpenChange={setShow dData />
       </div>
     </div>
   );

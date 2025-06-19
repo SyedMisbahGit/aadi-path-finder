@@ -31,26 +31,51 @@ export const useAssessment = () => {
   const queryClient = useQueryClient();
 
   // Save assessment to localStorage for stateless mode
-  const saveAssessmentLocally = (data: AssessmentData) => {
+  const saveAssessmentLocally = (data: AssessmentData, examType?: string) => {
     const assessmentWithId = {
       ...data,
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(assessmentWithId));
+    
+    // Support multi-exam storage
+    if (examType) {
+      const existingData = localStorage.getItem(STORAGE_KEY);
+      const multiExamData = existingData ? JSON.parse(existingData) : {};
+      multiExamData[examType] = assessmentWithId;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(multiExamData));
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(assessmentWithId));
+    }
+    
     return assessmentWithId;
   };
 
   // Load assessment from localStorage
-  const loadAssessmentFromLocal = () => {
+  const loadAssessmentFromLocal = (examType?: string) => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    
+    const data = JSON.parse(stored);
+    
+    if (examType && data[examType]) {
+      return data[examType];
+    }
+    
+    // Return full data if no specific exam requested
+    return data;
   };
 
   const saveAssessment = useMutation({
     mutationFn: async (data: AssessmentData) => {
+      // Determine exam type for local storage
+      const examType = data.examName === 'neet-ug' ? 'neet' : 
+                      data.examName === 'jee-main' ? 'jeeMain' : 
+                      data.examName === 'jee-advanced' ? 'jeeAdvanced' : 
+                      'general';
+      
       // Always save locally first for stateless mode
-      const localAssessment = saveAssessmentLocally(data);
+      const localAssessment = saveAssessmentLocally(data, examType);
       
       // If user is authenticated, also save to database
       if (user) {
