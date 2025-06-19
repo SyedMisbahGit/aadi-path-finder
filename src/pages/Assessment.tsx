@@ -6,53 +6,56 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, ArrowRight, RotateCcw, Calculator, Calendar, Download, Map } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssessment, AssessmentData } from "@/hooks/useAssessment";
 import { AuthModal } from "@/components/AuthModal";
 import { AIRecommendations } from "@/components/AIRecommendations";
+import { CounselingTracker } from "@/components/CounselingTracker";
+import { ExportRecommendations } from "@/components/ExportRecommendations";
+import { AdmissionTimeline } from "@/components/AdmissionTimeline";
+import { SimulationMode } from "@/components/SimulationMode";
 import { toast } from "sonner";
 
 const Assessment = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [submittedAssessmentId, setSubmittedAssessmentId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('assessment');
   const { user } = useAuth();
-  const { saveAssessment } = useAssessment();
+  const { saveAssessment, clearLocalData, loadAssessmentFromLocal } = useAssessment();
   
   const [formData, setFormData] = useState<AssessmentData>({
-    // Exam details
     examName: "",
     examYear: "",
     marks: "",
     totalMarks: "",
-    
-    // Personal details
     category: "",
     gender: "",
     domicileState: "",
-    
-    // Preferences
     preferredStates: [],
     budgetRange: "",
     hostOrDay: "",
-    
-    // Special considerations
     religiousPractices: "",
     specialNeeds: "",
-    
-    // Additional preferences
     collegeType: "",
     climatePreference: "",
     languagePreference: "",
-    
-    // Other details
     additionalInfo: ""
   });
 
   const totalSteps = 5;
   const progress = (currentStep / totalSteps) * 100;
+
+  useState(() => {
+    const savedAssessment = loadAssessmentFromLocal();
+    if (savedAssessment && Object.keys(savedAssessment).length > 2) {
+      setFormData(savedAssessment);
+      toast.info("Previous session data loaded");
+    }
+  });
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -74,38 +77,40 @@ const Assessment = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-
     try {
       const result = await saveAssessment.mutateAsync(formData);
-      setSubmittedAssessmentId(result.id);
+      setSubmittedAssessmentId(result.id || 'local-assessment');
+      setActiveTab('recommendations');
       toast.success("Assessment completed! Generating AI recommendations...");
     } catch (error) {
       console.error('Error submitting assessment:', error);
     }
   };
 
-  // If assessment is submitted, show recommendations
-  if (submittedAssessmentId) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-800">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Link>
-            <h1 className="text-3xl font-bold text-gray-900 mt-4">Your College Recommendations</h1>
-          </div>
-          
-          <AIRecommendations assessmentId={submittedAssessmentId} />
-        </div>
-      </div>
-    );
-  }
+  const resetSession = () => {
+    clearLocalData();
+    setFormData({
+      examName: "",
+      examYear: "",
+      marks: "",
+      totalMarks: "",
+      category: "",
+      gender: "",
+      domicileState: "",
+      preferredStates: [],
+      budgetRange: "",
+      hostOrDay: "",
+      religiousPractices: "",
+      specialNeeds: "",
+      collegeType: "",
+      climatePreference: "",
+      languagePreference: "",
+      additionalInfo: ""
+    });
+    setCurrentStep(1);
+    setSubmittedAssessmentId(null);
+    setActiveTab('assessment');
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -374,79 +379,137 @@ const Assessment = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-800">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mt-4">Personal Assessment</h1>
-          <p className="text-gray-600 mt-2">
-            Help us understand your profile to provide the most accurate recommendations.
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Step {currentStep} of {totalSteps}</span>
-            <span className="text-sm text-gray-500">{Math.round(progress)}% Complete</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-
-        {/* Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && "Exam Details"}
-              {currentStep === 2 && "Personal Information"}
-              {currentStep === 3 && "Preferences & Budget"}
-              {currentStep === 4 && "Special Considerations"}
-              {currentStep === 5 && "Final Details"}
-            </CardTitle>
-            <CardDescription>
-              {currentStep === 1 && "Tell us about your entrance exam performance"}
-              {currentStep === 2 && "Provide your personal details for quota calculations"}
-              {currentStep === 3 && "Share your preferences and budget constraints"}
-              {currentStep === 4 && "Help us ensure cultural and accessibility fit"}
-              {currentStep === 5 && "Any additional information to improve recommendations"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {renderStep()}
-            
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 1}
-                className="flex items-center"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Previous
-              </Button>
-              
-              {currentStep < totalSteps ? (
-                <Button onClick={nextStep} className="flex items-center">
-                  Next
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleSubmit} 
-                  className="flex items-center"
-                  disabled={saveAssessment.isPending}
-                >
-                  {saveAssessment.isPending ? "Processing..." : "Get Recommendations"}
-                  <ArrowRight className="w-4 h-4 ml-2" />
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">AI College Counselor</h1>
+              <p className="text-gray-600 mt-2">
+                Comprehensive college guidance with real-time data and AI insights
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {!user && (
+                <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
+                  Sign In (Optional)
                 </Button>
               )}
+              <Button variant="outline" size="sm" onClick={resetSession}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset Session
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="assessment">Assessment</TabsTrigger>
+            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="simulation">Simulation</TabsTrigger>
+            <TabsTrigger value="export">Export</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="assessment" className="space-y-6">
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Step {currentStep} of {totalSteps}</span>
+                <span className="text-sm text-gray-500">{Math.round(progress)}% Complete</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {currentStep === 1 && "Exam Details"}
+                  {currentStep === 2 && "Personal Information"}
+                  {currentStep === 3 && "Preferences & Budget"}
+                  {currentStep === 4 && "Special Considerations"}
+                  {currentStep === 5 && "Final Details"}
+                </CardTitle>
+                <CardDescription>
+                  {currentStep === 1 && "Tell us about your entrance exam performance"}
+                  {currentStep === 2 && "Provide your personal details for quota calculations"}
+                  {currentStep === 3 && "Share your preferences and budget constraints"}
+                  {currentStep === 4 && "Help us ensure cultural and accessibility fit"}
+                  {currentStep === 5 && "Any additional information to improve recommendations"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderStep()}
+                
+                <div className="flex justify-between mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className="flex items-center"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Previous
+                  </Button>
+                  
+                  {currentStep < totalSteps ? (
+                    <Button onClick={nextStep} className="flex items-center">
+                      Next
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleSubmit} 
+                      className="flex items-center"
+                      disabled={saveAssessment.isPending}
+                    >
+                      {saveAssessment.isPending ? "Processing..." : "Get Recommendations"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="recommendations">
+            {submittedAssessmentId ? (
+              <AIRecommendations assessmentId={submittedAssessmentId} />
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-gray-500 mb-4">Complete your assessment first to see personalized recommendations</p>
+                  <Button onClick={() => setActiveTab('assessment')}>
+                    Go to Assessment
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="tracker">
+            <CounselingTracker />
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <AdmissionTimeline />
+          </TabsContent>
+
+          <TabsContent value="simulation">
+            <SimulationMode />
+          </TabsContent>
+
+          <TabsContent value="export">
+            <ExportRecommendations 
+              recommendations={[]}
+              assessmentData={formData}
+            />
+          </TabsContent>
+        </Tabs>
 
         <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
       </div>
