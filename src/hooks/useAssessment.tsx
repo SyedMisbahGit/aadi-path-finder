@@ -13,6 +13,7 @@ export interface AssessmentData {
   category: string;
   gender: string;
   domicileState: string;
+  preferredStates: string[];
   budgetRange: string;
   hostOrDay: string;
   religiousPractices: string;
