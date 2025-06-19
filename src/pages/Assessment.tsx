@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, Car nentCardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -19,6 +18,9 @@ import { JEEMainAssessmentForm } from "@/components/JEEMainAssessmentForm";
 import { JEEAdvancedAssessmentForm } from "@/components/JEEAdvancedAssessmentForm";
 import { ExamSelectionGateway } from "@/components/ExamSelectionGateway";
 import { toast } from "sonner";
+import { ConversationalAI } from "@/components/ConversationalAI";
+import { CulturalSafetyScore } from "@/components/CulturalSafetyScore";
+import { ParentReport } from "@/components/ParentReport";
 
 const Assessment = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -27,9 +29,11 @@ const Assessment = () => {
   const [activeTab, setActiveTab] = useState('assessment');
   const [assessmentData, setAssessmentData] = useState<any>({});
   const [submittedAssessments, setSubmittedAssessments] = useState<Record<string, string>>({});
+  const [showConversationalMode, setShowConversationalMode] = useState(false);
   const { user } = useAuth();
   const { saveAssessment, clearLocalData, loadAssessmentFromLocal } = useAssessment();
 
+  // Load previous session data on component mount
   useState(() => {
     const savedData = loadAssessmentFromLocal();
     if (savedData && Object.keys(savedData).length > 2) {
@@ -164,7 +168,42 @@ const Assessment = () => {
     toast.success("Session reset successfully!");
   };
 
+  const handleConversationalData = (extractedData: any) => {
+    // Pre-fill form data based on conversational input
+    setAssessmentData(prev => ({
+      ...prev,
+      [activeExamTab]: {
+        ...prev[activeExamTab],
+        ...extractedData
+      }
+    }));
+    
+    // Switch back to form mode with pre-filled data
+    setShowConversationalMode(false);
+    toast.success("Data extracted from conversation! Please review and complete the form.");
+  };
+
   const renderAssessmentForm = () => {
+    if (showConversationalMode) {
+      return (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Chat with Al-Naseeh</h3>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConversationalMode(false)}
+            >
+              Switch to Form
+            </Button>
+          </div>
+          <ConversationalAI 
+            onDataExtracted={handleConversationalData}
+            examType={activeExamTab.replace('-', ' ').toUpperCase()}
+          />
+        </div>
+      );
+    }
+
     switch (activeExamTab) {
       case 'neet-ug':
         return (
@@ -299,9 +338,10 @@ const Assessment = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="assessment">Assessment</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="safety">Safety</TabsTrigger>
             <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="simulation">Simulation</TabsTrigger>
@@ -309,11 +349,51 @@ const Assessment = () => {
           </TabsList>
 
           <TabsContent value="assessment" className="space-y-6">
+            <div className="flex justify-end mb-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConversationalMode(!showConversationalMode)}
+                className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0"
+              >
+                {showConversationalMode ? "📝 Switch to Form" : "💬 Chat Mode"}
+              </Button>
+            </div>
             {renderAssessmentForm()}
           </TabsContent>
 
           <TabsContent value="recommendations">
             {renderRecommendations()}
+          </TabsContent>
+
+          <TabsContent value="safety">
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">🛡️ Cultural & Safety Assessment</h2>
+                <p className="text-gray-600">Detailed safety analysis for peace of mind</p>
+              </div>
+              
+              {submittedAssessments[activeExamTab] ? (
+                <div className="grid gap-6">
+                  <CulturalSafetyScore 
+                    collegeId="sample-college-1"
+                    collegeName="AIIMS Delhi"
+                  />
+                  <CulturalSafetyScore 
+                    collegeId="sample-college-2"
+                    collegeName="JIPMER Puducherry"
+                  />
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <p className="text-gray-500 mb-4">Complete your assessment first to see safety scores</p>
+                    <Button onClick={() => setActiveTab('assessment')}>
+                      Go to Assessment
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="tracker">
@@ -329,14 +409,21 @@ const Assessment = () => {
           </TabsContent>
 
           <TabsContent value="export">
-            <ExportRecommendations 
-              recommendations={[]}
-              assessmentData={assessmentData[activeExamTab]}
-            />
+            <div className="space-y-6">
+              <ExportRecommendations 
+                recommendations={[]}
+                assessmentData={assessmentData[activeExamTab]}
+              />
+              
+              <ParentReport 
+                recommendations={[]}
+                studentData={assessmentData[activeExamTab]}
+              />
+            </div>
           </TabsContent>
         </Tabs>
 
-        <AuthModal open={showAuthModal} onOpenChange={setShow dData />
+        <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
       </div>
     </div>
   );
