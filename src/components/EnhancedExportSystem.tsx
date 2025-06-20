@@ -299,7 +299,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
                 <Checkbox 
                   id="analysis" 
                   checked={includeAnalysis}
-                  onCheckedChange={setIncludeAnalysis}
+                  onCheckedChange={(checked) => setIncludeAnalysis(checked === true)}
                 />
                 <label htmlFor="analysis" className="text-sm">
                   Include AI Analysis
@@ -309,7 +309,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
                 <Checkbox 
                   id="cultural" 
                   checked={includeCultural}
-                  onCheckedChange={setIncludeCultural}
+                  onCheckedChange={(checked) => setIncludeCultural(checked === true)}
                 />
                 <label htmlFor="cultural" className="text-sm">
                   Cultural Fit Scores
@@ -319,7 +319,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
                 <Checkbox 
                   id="bilingual" 
                   checked={bilingualExport}
-                  onCheckedChange={setBilingualExport}
+                  onCheckedChange={(checked) => setBilingualExport(checked === true)}
                 />
                 <label htmlFor="bilingual" className="text-sm">
                   Bilingual Headers

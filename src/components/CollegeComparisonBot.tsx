@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Versus, Zap, TrendingUp, MapPin, DollarSign, Shield, Users } from "lucide-react";
+import { ArrowLeftRight, Zap, TrendingUp, MapPin, DollarSign, Shield, Users } from "lucide-react";
 import { toast } from "sonner";
 import { aiService } from "@/services/aiService";
 
@@ -129,7 +129,7 @@ export const CollegeComparisonBot = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Versus className="w-5 h-5" />
+            <ArrowLeftRight className="w-5 h-5" />
             College Comparison Bot
             <span className="text-sm text-gray-500">- کالج موازنہ AI</span>
           </CardTitle>
@@ -185,7 +185,7 @@ export const CollegeComparisonBot = () => {
                 "Comparing with AI..."
               ) : (
                 <>
-                  <Versus className="w-4 h-4 mr-2" />
+                  <ArrowLeftRight className="w-4 h-4 mr-2" />
                   Compare Colleges
                 </>
               )}
