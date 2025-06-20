@@ -7,7 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
-import Assessment from "./pages/Assessment";
+import NEETCounseling from "./pages/NEETCounseling";
+import JEECounseling from "./pages/JEECounseling";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,8 +23,8 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/assessment" element={<Assessment />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="/neet" element={<NEETCounseling />} />
+              <Route path="/jee" element={<JEECounseling />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
