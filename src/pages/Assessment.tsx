@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import { ConversationalAI } from "@/components/ConversationalAI";
 import { CulturalSafetyScore } from "@/components/CulturalSafetyScore";
 import { ParentReport } from "@/components/ParentReport";
+import { IntelligentChatAI } from "@/components/IntelligentChatAI";
+import { AlertSystem } from "@/components/AlertSystem";
 
 const Assessment = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -170,12 +172,14 @@ const Assessment = () => {
 
   const handleConversationalData = (extractedData: any) => {
     // Pre-fill form data based on conversational input
+    const currentExamData = {
+      ...assessmentData[activeExamTab],
+      ...extractedData
+    };
+    
     setAssessmentData(prev => ({
       ...prev,
-      [activeExamTab]: {
-        ...prev[activeExamTab],
-        ...extractedData
-      }
+      [activeExamTab]: currentExamData
     }));
     
     // Switch back to form mode with pre-filled data
@@ -188,7 +192,7 @@ const Assessment = () => {
       return (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Chat with Al-Naseeh</h3>
+            <h3 className="text-lg font-semibold">Chat with Al-Naseeh الناصح</h3>
             <Button 
               variant="outline" 
               onClick={() => setShowConversationalMode(false)}
@@ -196,9 +200,10 @@ const Assessment = () => {
               Switch to Form
             </Button>
           </div>
-          <ConversationalAI 
+          <IntelligentChatAI 
             onDataExtracted={handleConversationalData}
             examType={activeExamTab.replace('-', ' ').toUpperCase()}
+            studentProfile={assessmentData[activeExamTab]}
           />
         </div>
       );
@@ -338,12 +343,13 @@ const Assessment = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="assessment">Assessment</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
             <TabsTrigger value="safety">Safety</TabsTrigger>
             <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
             <TabsTrigger value="simulation">Simulation</TabsTrigger>
             <TabsTrigger value="export">Export</TabsTrigger>
           </TabsList>
@@ -355,7 +361,7 @@ const Assessment = () => {
                 onClick={() => setShowConversationalMode(!showConversationalMode)}
                 className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0"
               >
-                {showConversationalMode ? "📝 Switch to Form" : "💬 Chat Mode"}
+                {showConversationalMode ? "📝 Switch to Form" : "🤖 AI Chat Mode"}
               </Button>
             </div>
             {renderAssessmentForm()}
@@ -402,6 +408,17 @@ const Assessment = () => {
 
           <TabsContent value="timeline">
             <AdmissionTimeline />
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">🔔 Smart Alerts & Notifications</h2>
+                <p className="text-gray-600">Never miss important counseling updates</p>
+              </div>
+              
+              <AlertSystem studentProfile={assessmentData[activeExamTab]} />
+            </div>
           </TabsContent>
 
           <TabsContent value="simulation">
