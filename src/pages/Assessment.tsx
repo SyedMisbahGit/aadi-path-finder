@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +23,13 @@ import { CulturalSafetyScore } from "@/components/CulturalSafetyScore";
 import { ParentReport } from "@/components/ParentReport";
 import { IntelligentChatAI } from "@/components/IntelligentChatAI";
 import { AlertSystem } from "@/components/AlertSystem";
+import { VoiceAIChat } from "@/components/VoiceAIChat";
+import { EnhancedExportSystem } from "@/components/EnhancedExportSystem";
+import { CollegeComparisonBot } from "@/components/CollegeComparisonBot";
+import { JEESpecificModules } from "@/components/JEESpecificModules";
+import { useUrduFonts } from "@/hooks/useUrduFonts";
+import { aiService } from "@/services/aiService";
+import { realTimeDataService } from "@/services/realtimeDataService";
 
 const Assessment = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -32,6 +39,10 @@ const Assessment = () => {
   const [assessmentData, setAssessmentData] = useState<any>({});
   const [submittedAssessments, setSubmittedAssessments] = useState<Record<string, string>>({});
   const [showConversationalMode, setShowConversationalMode] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'hi' | 'ur'>('en');
+  const [parentMode, setParentMode] = useState(false);
+  const [aiQueryMode, setAIQueryMode] = useState(false);
+  const [liveData, setLiveData] = useState<any>(null);
   const { user } = useAuth();
   const { saveAssessment, clearLocalData, loadAssessmentFromLocal } = useAssessment();
 
@@ -61,6 +72,24 @@ const Assessment = () => {
       }
     }
   });
+
+  // Apply Urdu fonts when needed
+  useUrduFonts(language);
+
+  // Load real-time data
+  useEffect(() => {
+    const loadRealTimeData = async () => {
+      try {
+        const cutoffs = await realTimeDataService.getLiveCutoffs('neet');
+        const schedule = await realTimeDataService.getCounselingSchedule('neet');
+        setLiveData({ cutoffs, schedule });
+      } catch (error) {
+        console.error('Failed to load real-time data:', error);
+      }
+    };
+    
+    loadRealTimeData();
+  }, []);
 
   const handleExamSelect = (exams: string[]) => {
     setSelectedExams(exams);
@@ -187,7 +216,44 @@ const Assessment = () => {
     toast.success("Data extracted from conversation! Please review and complete the form.");
   };
 
+  const handleAIQuery = async (query: string) => {
+    try {
+      const analysis = await aiService.analyzeQuery(query, assessmentData[activeExamTab]);
+      const recommendations = await aiService.getCollegeRecommendations(analysis);
+      
+      // Update assessment data and show recommendations
+      setAssessmentData(prev => ({
+        ...prev,
+        [activeExamTab]: { ...prev[activeExamTab], ...analysis }
+      }));
+      
+      setActiveTab('recommendations');
+      toast.success('AI query processed successfully!');
+    } catch (error) {
+      console.error('AI query failed:', error);
+      toast.error('Failed to process AI query');
+    }
+  };
+
   const renderAssessmentForm = () => {
+    if (aiQueryMode) {
+      return (
+        <>
+          <VoiceAIChat 
+            language={language}
+            onQueryProcessed={handleAIQuery}
+          />
+          <Button 
+            variant="outline" 
+            onClick={() => setAIQueryMode(false)}
+            className="mt-4 w-full"
+          >
+            Switch to Form Mode
+          </Button>
+        </>
+      );
+    }
+
     if (showConversationalMode) {
       return (
         <div className="space-y-4">
@@ -294,7 +360,7 @@ const Assessment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 py-8">
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 py-8 ${language === 'ur' ? 'font-urdu text-right' : ''}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <Link to="/" className="inline-flex items-center text-blue-600 hover:text-blue-800">
@@ -322,6 +388,50 @@ const Assessment = () => {
           </div>
         </div>
 
+        {/* Language & Mode Toggle */}
+        <div className="mb-4 flex justify-between items-center">
+          <div className="flex gap-2">
+            <Button
+              variant={language === 'en' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setLanguage('en')}
+            >
+              English
+            </Button>
+            <Button
+              variant={language === 'hi' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setLanguage('hi')}
+            >
+              हिंदी
+            </Button>
+            <Button
+              variant={language === 'ur' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setLanguage('ur')}
+            >
+              اردو
+            </Button>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant={parentMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setParentMode(!parentMode)}
+            >
+              👨‍👩‍👧 Parent Mode
+            </Button>
+            <Button
+              variant={aiQueryMode ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setAIQueryMode(!aiQueryMode)}
+            >
+              🤖 AI Chat Mode
+            </Button>
+          </div>
+        </div>
+
         {/* Exam Selection Tabs */}
         {selectedExams.length > 1 && (
           <div className="mb-6">
@@ -343,9 +453,15 @@ const Assessment = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="assessment">Assessment</TabsTrigger>
-            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-9">
+            <TabsTrigger value="assessment">
+              {language === 'ur' ? 'تشخیص' : language === 'hi' ? 'मूल्यांकन' : 'Assessment'}
+            </TabsTrigger>
+            <TabsTrigger value="recommendations">
+              {language === 'ur' ? 'تجاویز' : language === 'hi' ? 'सुझाव' : 'Recommendations'}
+            </TabsTrigger>
+            <TabsTrigger value="jee-modules">JEE Tools</TabsTrigger>
+            <TabsTrigger value="compare">Compare</TabsTrigger>
             <TabsTrigger value="safety">Safety</TabsTrigger>
             <TabsTrigger value="tracker">Live Tracker</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -369,6 +485,26 @@ const Assessment = () => {
 
           <TabsContent value="recommendations">
             {renderRecommendations()}
+          </TabsContent>
+
+          <TabsContent value="jee-modules">
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">⚙️ JEE-Specific AI Tools</h2>
+                <p className="text-gray-600">Advanced tools for JEE Main & Advanced counseling</p>
+              </div>
+              <JEESpecificModules />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="compare">
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">🆚 College Comparison AI</h2>
+                <p className="text-gray-600">Compare colleges with AI-powered analysis</p>
+              </div>
+              <CollegeComparisonBot />
+            </div>
           </TabsContent>
 
           <TabsContent value="safety">
@@ -427,14 +563,10 @@ const Assessment = () => {
 
           <TabsContent value="export">
             <div className="space-y-6">
-              <ExportRecommendations 
-                recommendations={[]}
-                assessmentData={assessmentData[activeExamTab]}
-              />
-              
-              <ParentReport 
-                recommendations={[]}
-                studentData={assessmentData[activeExamTab]}
+              <EnhancedExportSystem 
+                data={[]}
+                studentProfile={assessmentData[activeExamTab]}
+                language={language}
               />
             </div>
           </TabsContent>
