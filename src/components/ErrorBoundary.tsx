@@ -1,6 +1,6 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 
@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen flex items-center justify-center p-4">
           <Alert className="max-w-md">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>🚨 Something went wrong</AlertTitle>
+            <h3 className="font-semibold text-lg mb-2">🚨 Something went wrong</h3>
             <AlertDescription className="mt-2">
               Al-Naseeh encountered an error. Don't worry - your data is safe!
               <div className="mt-4">
