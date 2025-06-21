@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Mic, Send, Bot, User, Brain, Target, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -81,7 +82,7 @@ I understand incomplete information and will guide you through everything!`,
     } catch (error) {
       console.error('AI processing error:', error);
       // Fallback to local processing
-      return await this.localProcessing(text);
+      return await localProcessing(text);
     }
   };
 
@@ -167,7 +168,7 @@ I understand incomplete information and will guide you through everything!`,
   const generateAIResponse = (extractedData: any, userText: string): string => {
     if (!extractedData || !extractedData.response) {
       // Fallback to local response generation
-      return this.generateLocalResponse(extractedData, userText);
+      return generateLocalResponse(extractedData, userText);
     }
     
     return extractedData.response;
