@@ -1,13 +1,15 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Mic, Send, Bot, User, Brain, Target, Shield } from 'lucide-react';
+import { Mic, Send, Bot, User, Brain, Target, Shield, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { MultilingualSupport } from './MultilingualSupport';
+import { AIInsights } from './AIInsights';
+import { useAIEngine } from '@/hooks/useAIEngine';
 
 interface Message {
   id: string;
@@ -54,190 +56,33 @@ I understand incomplete information and will guide you through everything!`,
   ]);
 
   const [input, setInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [studentProfile, setStudentProfile] = useState<StudentProfile>({});
   const [isListening, setIsListening] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('en');
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [safetyScores, setSafetyScores] = useState<any[]>([]);
+  const [culturalFit, setCulturalFit] = useState<any>(null);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Use the enhanced AI engine
+  const { 
+    isProcessing, 
+    aiInsights, 
+    processWithAI, 
+    getSafetyAnalysis,
+    getMLPredictions,
+    triggerDataCrawl 
+  } = useAIEngine({ 
+    language: currentLanguage,
+    examType: studentProfile.exam
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  const processNaturalLanguageInput = async (text: string): Promise<any> => {
-    try {
-      // Call the AI counselor engine
-      const { data, error } = await supabase.functions.invoke('ai-counselor-engine', {
-        body: { 
-          message: text,
-          studentProfile,
-          language: 'en', // Can be made dynamic
-          examType: 'NEET' // Can be detected from context
-        }
-      });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('AI processing error:', error);
-      // Fallback to local processing
-      return await localProcessing(text);
-    }
-  };
-
-  const localProcessing = async (text: string) => {
-    // Advanced NLP processing to extract student data
-    const patterns = {
-      exam: /(neet|jee[- ]?main|medical|engineering)/i,
-      percentile: /(\d{1,3}(?:\.\d+)?)\s*(?:percentile|%)/i,
-      score: /(\d{3,4})\s*(?:marks?|score)/i,
-      rank: /(?:rank|air)\s*(\d{1,6})/i,
-      category: /(general|gen|obc|sc|st|ews|pwd)/i,
-      gender: /(male|female|girl|boy|daughter|son)/i,
-      hijab: /(hijab|islamic|muslim|cultural)/i,
-      income: /(low|poor|middle|high|rich)\s*(?:income|family)/i,
-      year: /(202[4-9])/i,
-      approximate: /(around|about|roughly|approximately)/i
-    };
-
-    const extracted: any = {
-      confidence: 0.7,
-      reasoning: []
-    };
-
-    // Extract exam type
-    const examMatch = text.match(patterns.exam);
-    if (examMatch) {
-      const exam = examMatch[1].toLowerCase();
-      extracted.exam = exam.includes('neet') || exam.includes('medical') ? 'NEET' : 'JEE-MAIN';
-      extracted.reasoning.push(`Detected ${extracted.exam} exam`);
-    }
-
-    // Extract scores with context
-    const percentileMatch = text.match(patterns.percentile);
-    const scoreMatch = text.match(patterns.score);
-    const rankMatch = text.match(patterns.rank);
-    const approximateMatch = text.match(patterns.approximate);
-
-    if (percentileMatch) {
-      extracted.scoreType = 'percentile';
-      extracted.scoreValue = parseFloat(percentileMatch[1]);
-      extracted.reasoning.push(`Percentile: ${extracted.scoreValue}%`);
-    } else if (scoreMatch) {
-      extracted.scoreType = 'score';
-      extracted.scoreValue = parseInt(scoreMatch[1]);
-      extracted.reasoning.push(`Score: ${extracted.scoreValue} marks`);
-    } else if (rankMatch) {
-      extracted.scoreType = 'rank';
-      extracted.scoreValue = parseInt(rankMatch[1]);
-      extracted.reasoning.push(`Rank: ${extracted.scoreValue}`);
-    }
-
-    if (approximateMatch) {
-      extracted.approximate = true;
-      extracted.confidence = 0.5;
-      extracted.reasoning.push('Approximate values detected');
-    }
-
-    // Extract category
-    const categoryMatch = text.match(patterns.category);
-    if (categoryMatch) {
-      extracted.category = categoryMatch[1].toUpperCase();
-      extracted.reasoning.push(`Category: ${extracted.category}`);
-    }
-
-    // Extract gender and cultural needs
-    const genderMatch = text.match(patterns.gender);
-    if (genderMatch) {
-      const g = genderMatch[1].toLowerCase();
-      extracted.gender = g.includes('girl') || g.includes('daughter') ? 'female' : 
-                        g.includes('boy') || g.includes('son') ? 'male' : g;
-      extracted.reasoning.push(`Gender: ${extracted.gender}`);
-    }
-
-    const hijabMatch = text.match(patterns.hijab);
-    if (hijabMatch) {
-      extracted.culturalNeeds = ['hijab-friendly', 'islamic-facilities'];
-      extracted.reasoning.push('Cultural requirements: Islamic-friendly environment');
-    }
-
-    return extracted;
-  };
-
-  const generateAIResponse = (extractedData: any, userText: string): string => {
-    if (!extractedData || !extractedData.response) {
-      // Fallback to local response generation
-      return generateLocalResponse(extractedData, userText);
-    }
-    
-    return extractedData.response;
-  };
-
-  const generateLocalResponse = (extractedData: any, userText: string): string => {
-    let response = '';
-    
-    if (extractedData.reasoning && extractedData.reasoning.length > 0) {
-      response += `✨ **AI Analysis** (Confidence: ${(extractedData.confidence * 100).toFixed(0)}%)\n\n`;
-      response += `I understood:\n`;
-      extractedData.reasoning.forEach((reason: string) => {
-        response += `• ${reason}\n`;
-      });
-      response += '\n';
-
-      // Generate predictions and recommendations
-      if (extractedData.scoreValue) {
-        response += `🎯 **Predicted Outcomes:**\n`;
-        
-        if (extractedData.exam === 'NEET' && extractedData.scoreType === 'score') {
-          const score = extractedData.scoreValue;
-          if (score >= 600) {
-            response += `• Government medical colleges: High probability\n`;
-            response += `• AIIMS: Possible (if score > 650)\n`;
-            response += `• State quota advantage available\n`;
-          } else if (score >= 450) {
-            response += `• Private medical colleges: High probability\n`;
-            response += `• BDS in government colleges: Good chance\n`;
-            response += `• AYUSH courses: Excellent options\n`;
-          }
-        } else if (extractedData.exam === 'JEE-MAIN' && extractedData.scoreType === 'percentile') {
-          const percentile = extractedData.scoreValue;
-          if (percentile >= 95) {
-            response += `• NITs: Good chances in preferred branches\n`;
-            response += `• Top IIITs: High probability\n`;
-            response += `• State government colleges: Excellent options\n`;
-          } else if (percentile >= 85) {
-            response += `• NITs: Lower branches possible\n`;
-            response += `• Good IIITs and GFTIs: Strong chances\n`;
-            response += `• Private colleges: Excellent options\n`;
-          }
-        }
-
-        // Cultural considerations
-        if (extractedData.culturalNeeds) {
-          response += `\n🕌 **Cultural Considerations:**\n`;
-          response += `• Filtering for hijab-friendly colleges\n`;
-          response += `• Considering hostels with Islamic dietary options\n`;
-          response += `• Evaluating regional cultural acceptance\n`;
-        }
-
-        response += `\n💡 **Next Steps:**\n`;
-        response += `• Need your state/region preference?\n`;
-        response += `• What's your budget range?\n`;
-        response += `• Any specific college types preferred?\n`;
-        response += `\nI'll create a personalized college list with safety scores!`;
-      }
-    } else {
-      response = `I'd love to help! Could you share more details like:\n\n`;
-      response += `📊 Your exam score/percentile/rank\n`;
-      response += `📋 Category (if applicable)\n`;
-      response += `📍 Preferred states or regions\n`;
-      response += `💰 Budget considerations\n\n`;
-      response += `Example: "I got 78 percentile in JEE Main, OBC category, looking for engineering colleges in Maharashtra under 2 lakh fees"`;
-    }
-
-    return response;
-  };
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
@@ -250,27 +95,49 @@ I understand incomplete information and will guide you through everything!`,
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setIsProcessing(true);
 
     try {
-      // Process natural language input with backend AI
-      const extractedData = await processNaturalLanguageInput(input);
+      // Process with enhanced AI engine
+      const result = await processWithAI(input, studentProfile);
       
-      // Update student profile
-      const updatedProfile = { ...studentProfile, ...extractedData };
-      setStudentProfile(updatedProfile);
+      if (result.updatedProfile) {
+        setStudentProfile(result.updatedProfile);
+      }
 
-      // Generate AI response
-      const aiResponse = generateAIResponse(extractedData, input);
-      
+      if (result.predictions) {
+        setPredictions(result.predictions);
+        
+        // Get safety analysis for top predictions
+        const topColleges = result.predictions.slice(0, 5);
+        const safetyPromises = topColleges.map(pred => 
+          getSafetyAnalysis(
+            pred.college.name, 
+            pred.college.location, 
+            studentProfile.gender, 
+            studentProfile.culturalNeeds
+          )
+        );
+        
+        const safetyResults = await Promise.all(safetyPromises);
+        setSafetyScores(safetyResults.filter(Boolean).map((s, i) => ({
+          college: topColleges[i].college.name,
+          score: s.safetyAnalysis.overallScore
+        })));
+        
+        // Set cultural fit from first result
+        if (safetyResults[0]?.culturalAnalysis) {
+          setCulturalFit(safetyResults[0].culturalAnalysis);
+        }
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: aiResponse,
+        content: result.response,
         timestamp: new Date(),
-        data: extractedData,
-        confidence: extractedData.confidence,
-        reasoning: extractedData.reasoning?.join(', ')
+        data: result.extractedData,
+        confidence: result.confidence,
+        reasoning: result.extractedData.reasoning?.join(', ')
       };
 
       setMessages(prev => [...prev, aiMessage]);
@@ -284,11 +151,18 @@ I understand incomplete information and will guide you through everything!`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsProcessing(false);
     }
 
     setInput('');
+  };
+
+  const handleRefreshData = async () => {
+    if (studentProfile.exam) {
+      toast.info('Updating live counseling data...');
+      await triggerDataCrawl(studentProfile.exam);
+    } else {
+      toast.info('Please specify your exam (NEET/JEE) first to update relevant data.');
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -298,41 +172,87 @@ I understand incomplete information and will guide you through everything!`,
     }
   };
 
+  // Set font family based on language
+  const getFontFamily = (language: string) => {
+    switch (language) {
+      case 'hi':
+        return 'font-devanagari'; // You'd need to add this to your CSS
+      case 'ur':
+        return 'font-nastaliq'; // Noto Nastaliq Urdu
+      default:
+        return 'font-sans';
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50">
-      {/* Header */}
+    <div className={`h-screen flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50 ${getFontFamily(currentLanguage)}`}>
+      {/* Enhanced Header */}
       <div className="bg-white shadow-sm border-b p-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
               <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Al-Naseeh الناصح</h1>
-              <p className="text-sm text-gray-600">AI Career Counselor</p>
+              <p className="text-sm text-gray-600">AI Career Counselor • Live Data • Cultural-Safe</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Shield className="w-3 h-3" />
-              Secure
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Target className="w-3 h-3" />
-              {Object.keys(studentProfile).length} insights
-            </Badge>
+          
+          <div className="flex items-center gap-4">
+            <MultilingualSupport 
+              currentLanguage={currentLanguage}
+              onLanguageChange={setCurrentLanguage}
+            />
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshData}
+                disabled={isProcessing}
+              >
+                <RefreshCw className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Secure
+              </Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Target className="w-3 h-3" />
+                {Object.keys(studentProfile).length} insights
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* AI Insights Dashboard */}
+      {aiInsights && (
+        <div className="bg-white border-b p-4">
+          <div className="max-w-6xl mx-auto">
+            <AIInsights 
+              predictions={predictions}
+              safetyScores={safetyScores}
+              culturalFit={culturalFit}
+              confidence={aiInsights.confidence}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
+      <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full">
         <ScrollArea className="flex-1 p-4" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div key={message.id} className="space-y-2">
                 <div className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex gap-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex gap-3 max-w-[85%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       message.type === 'user' ? 'bg-blue-500' : 'bg-gradient-to-r from-green-500 to-teal-500'
                     }`}>
@@ -349,10 +269,15 @@ I understand incomplete information and will guide you through everything!`,
                     }`}>
                       <div className="whitespace-pre-line text-sm">{message.content}</div>
                       {message.confidence && message.type === 'ai' && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="mt-3 pt-3 border-t border-gray-200">
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             <Brain className="w-3 h-3" />
-                            Confidence: {(message.confidence * 100).toFixed(0)}%
+                            AI Confidence: {(message.confidence * 100).toFixed(0)}%
+                            {message.reasoning && (
+                              <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
+                                {message.reasoning}
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
@@ -374,7 +299,7 @@ I understand incomplete information and will guide you through everything!`,
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
-                    <span className="text-sm text-gray-600">AI analyzing...</span>
+                    <span className="text-sm text-gray-600">AI brain processing...</span>
                   </div>
                 </div>
               </div>
@@ -382,7 +307,7 @@ I understand incomplete information and will guide you through everything!`,
           </div>
         </ScrollArea>
 
-        {/* Input Area */}
+        {/* Enhanced Input Area */}
         <div className="border-t bg-white p-4">
           <div className="flex gap-3 items-end">
             <div className="flex-1">
@@ -390,7 +315,13 @@ I understand incomplete information and will guide you through everything!`,
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Tell me about your exam, scores, preferences... I understand natural language!"
+                placeholder={
+                  currentLanguage === 'hi' 
+                    ? "अपनी परीक्षा, स्कोर, प्राथमिकताओं के बारे में बताएं..."
+                    : currentLanguage === 'ur'
+                    ? "اپنے امتحان، اسکور، ترجیحات کے بارے میں بتائیں..."
+                    : "Tell me about your exam, scores, preferences... I understand natural language!"
+                }
                 className="w-full"
                 disabled={isProcessing}
               />
@@ -408,7 +339,7 @@ I understand incomplete information and will guide you through everything!`,
             </Button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Powered by autonomous AI • Multi-language support • Real-time data analysis
+            Powered by autonomous AI • Multi-language support • Real-time data analysis • Cultural-safety aware
           </p>
         </div>
       </div>

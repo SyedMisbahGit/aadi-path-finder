@@ -144,6 +144,87 @@ export type Database = {
         }
         Relationships: []
       }
+      counseling_rounds: {
+        Row: {
+          created_at: string
+          cutoff_trends: Json | null
+          end_date: string | null
+          exam_type: string
+          id: string
+          is_active: boolean | null
+          round_name: string | null
+          round_number: number
+          seat_matrix: Json | null
+          start_date: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          cutoff_trends?: Json | null
+          end_date?: string | null
+          exam_type: string
+          id?: string
+          is_active?: boolean | null
+          round_name?: string | null
+          round_number: number
+          seat_matrix?: Json | null
+          start_date?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          cutoff_trends?: Json | null
+          end_date?: string | null
+          exam_type?: string
+          id?: string
+          is_active?: boolean | null
+          round_name?: string | null
+          round_number?: number
+          seat_matrix?: Json | null
+          start_date?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      crawl_status: {
+        Row: {
+          created_at: string
+          errors: string[] | null
+          exam_type: string
+          id: string
+          last_crawled: string | null
+          records_processed: number | null
+          sources_crawled: string[] | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          errors?: string[] | null
+          exam_type: string
+          id?: string
+          last_crawled?: string | null
+          records_processed?: number | null
+          sources_crawled?: string[] | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          errors?: string[] | null
+          exam_type?: string
+          id?: string
+          last_crawled?: string | null
+          records_processed?: number | null
+          sources_crawled?: string[] | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       historical_cutoffs: {
         Row: {
           category: Database["public"]["Enums"]["category_type"]
@@ -196,6 +277,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ml_models: {
+        Row: {
+          accuracy_score: number | null
+          created_at: string
+          exam_type: string
+          id: string
+          is_active: boolean | null
+          last_trained: string | null
+          model_name: string
+          model_parameters: Json | null
+          model_type: string
+          training_data_years: number[] | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          created_at?: string
+          exam_type: string
+          id?: string
+          is_active?: boolean | null
+          last_trained?: string | null
+          model_name: string
+          model_parameters?: Json | null
+          model_type: string
+          training_data_years?: number[] | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          created_at?: string
+          exam_type?: string
+          id?: string
+          is_active?: boolean | null
+          last_trained?: string | null
+          model_name?: string
+          model_parameters?: Json | null
+          model_type?: string
+          training_data_years?: number[] | null
+        }
+        Relationships: []
+      }
+      news_sentiment: {
+        Row: {
+          analyzed_at: string
+          content_summary: string | null
+          cultural_safety_score: number | null
+          gender_safety_score: number | null
+          headline: string | null
+          id: string
+          location: string
+          news_source: string | null
+          published_date: string | null
+          safety_relevance: number | null
+          sentiment_score: number | null
+          state: string
+        }
+        Insert: {
+          analyzed_at?: string
+          content_summary?: string | null
+          cultural_safety_score?: number | null
+          gender_safety_score?: number | null
+          headline?: string | null
+          id?: string
+          location: string
+          news_source?: string | null
+          published_date?: string | null
+          safety_relevance?: number | null
+          sentiment_score?: number | null
+          state: string
+        }
+        Update: {
+          analyzed_at?: string
+          content_summary?: string | null
+          cultural_safety_score?: number | null
+          gender_safety_score?: number | null
+          headline?: string | null
+          id?: string
+          location?: string
+          news_source?: string | null
+          published_date?: string | null
+          safety_relevance?: number | null
+          sentiment_score?: number | null
+          state?: string
+        }
+        Relationships: []
       }
       student_assessments: {
         Row: {

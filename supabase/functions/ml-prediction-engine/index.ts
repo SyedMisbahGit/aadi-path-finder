@@ -1,339 +1,431 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface PredictionRequest {
-  examType: 'NEET' | 'JEE-MAIN';
-  scoreType: 'marks' | 'percentile' | 'rank';
-  scoreValue: number;
-  category: string;
-  state?: string;
-  year: number;
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+);
+
+// Advanced ML prediction models (simplified for demo)
+class MLPredictionEngine {
+  
+  // Normalize scores across different years and exam sessions
+  async normalizeScore(scoreType: string, scoreValue: number, examType: string, year: number = 2025): Promise<any> {
+    try {
+      console.log(`Normalizing ${scoreType}: ${scoreValue} for ${examType} ${year}`);
+      
+      // Get historical normalization data
+      const { data: historicalData } = await supabase
+        .from('historical_cutoffs')
+        .select('exam_year, opening_marks, closing_marks, opening_rank, closing_rank')
+        .eq('exam_name', examType.toLowerCase().replace('-', '_') as any)
+        .gte('exam_year', year - 3)
+        .order('exam_year', { ascending: false });
+      
+      let normalizedScore = scoreValue;
+      let equivalentRank = null;
+      let equivalentPercentile = null;
+      let confidence = 0.8;
+      
+      if (scoreType === 'percentile') {
+        // Convert percentile to approximate rank
+        const totalCandidates = examType === 'NEET' ? 1800000 : 1200000; // Approximate
+        equivalentRank = Math.round((100 - scoreValue) * totalCandidates / 100);
+        
+        // Convert percentile to approximate marks (simplified model)
+        if (examType === 'NEET') {
+          normalizedScore = this.percentileToMarks(scoreValue, 'NEET');
+        } else {
+          normalizedScore = this.percentileToMarks(scoreValue, 'JEE-MAIN');
+        }
+        
+      } else if (scoreType === 'marks') {
+        // Convert marks to percentile and rank
+        if (examType === 'NEET') {
+          equivalentPercentile = this.marksToPercentile(scoreValue, 'NEET');
+        } else {
+          equivalentPercentile = this.marksToPercentile(scoreValue, 'JEE-MAIN');
+        }
+        
+        const totalCandidates = examType === 'NEET' ? 1800000 : 1200000;
+        equivalentRank = Math.round((100 - equivalentPercentile) * totalCandidates / 100);
+        
+      } else if (scoreType === 'rank') {
+        // Convert rank to percentile and approximate marks
+        const totalCandidates = examType === 'NEET' ? 1800000 : 1200000;
+        equivalentPercentile = 100 - (scoreValue / totalCandidates * 100);
+        
+        if (examType === 'NEET') {
+          normalizedScore = this.percentileToMarks(equivalentPercentile, 'NEET');
+        } else {
+          normalizedScore = this.percentileToMarks(equivalentPercentile, 'JEE-MAIN');
+        }
+      }
+      
+      // Apply year-over-year difficulty adjustments
+      const difficultyAdjustment = this.calculateDifficultyAdjustment(historicalData, year);
+      normalizedScore = Math.round(normalizedScore + difficultyAdjustment);
+      
+      return {
+        originalScore: scoreValue,
+        originalType: scoreType,
+        normalizedMarks: normalizedScore,
+        equivalentRank: equivalentRank,
+        equivalentPercentile: equivalentPercentile,
+        difficultyAdjustment: difficultyAdjustment,
+        confidence: confidence,
+        year: year,
+        examType: examType
+      };
+      
+    } catch (error) {
+      console.error('Score normalization error:', error);
+      return {
+        originalScore: scoreValue,
+        normalizedMarks: scoreValue,
+        confidence: 0.3,
+        error: error.message
+      };
+    }
+  }
+  
+  // Advanced cutoff prediction using historical trends
+  async predictCutoffs(examType: string, category: string, state: string, year: number = 2025): Promise<any[]> {
+    try {
+      console.log(`Predicting cutoffs for ${examType} ${category} in ${state} for ${year}`);
+      
+      // Get historical cutoff data
+      const { data: historicalCutoffs } = await supabase
+        .from('historical_cutoffs')
+        .select(`
+          *,
+          colleges!inner(name, location, state, type, safety_score, cultural_diversity_score)
+        `)
+        .eq('exam_name', examType.toLowerCase().replace('-', '_') as any)
+        .eq('category', category)
+        .gte('exam_year', year - 5)
+        .order('exam_year', { ascending: false })
+        .limit(200);
+      
+      if (!historicalCutoffs || historicalCutoffs.length === 0) {
+        return [];
+      }
+      
+      const predictions = [];
+      
+      // Group by college for trend analysis
+      const collegeGroups = this.groupBy(historicalCutoffs, 'college_id');
+      
+      for (const [collegeId, cutoffs] of Object.entries(collegeGroups)) {
+        const college = cutoffs[0].colleges;
+        
+        // Skip if not in target state (unless it's a national institution)
+        if (state !== 'all' && !college.location.toLowerCase().includes(state.toLowerCase()) && 
+            !college.name.toLowerCase().includes('aiims') && 
+            !college.name.toLowerCase().includes('iit') &&
+            !college.name.toLowerCase().includes('nit')) {
+          continue;
+        }
+        
+        // Calculate trend-based prediction
+        const prediction = this.calculateTrendPrediction(cutoffs as any[], year);
+        
+        predictions.push({
+          college: {
+            id: collegeId,
+            name: college.name,
+            location: college.location,
+            state: college.state,
+            type: college.type,
+            safetyScore: college.safety_score || 7.0
+          },
+          prediction: {
+            predictedCutoffRank: prediction.predictedRank,
+            predictedCutoffMarks: prediction.predictedMarks,
+            trend: prediction.trend,
+            confidence: prediction.confidence,
+            historicalData: prediction.historicalYears
+          },
+          reasoning: `Based on ${prediction.historicalYears} years of data. ${prediction.trend} trend observed. Predicted closing rank: ${prediction.predictedRank}`
+        });
+      }
+      
+      // Sort by predicted cutoff (best opportunities first)
+      return predictions.sort((a, b) => b.prediction.predictedCutoffRank - a.prediction.predictedCutoffRank);
+      
+    } catch (error) {
+      console.error('Cutoff prediction error:', error);
+      return [];
+    }
+  }
+  
+  // Admission probability modeling
+  async calculateAdmissionProbability(studentScore: any, collegeData: any): Promise<number> {
+    try {
+      const { normalizedMarks, equivalentRank, examType } = studentScore;
+      const { predictedCutoffRank, predictedCutoffMarks } = collegeData.prediction;
+      
+      let probability = 0;
+      
+      if (equivalentRank && predictedCutoffRank) {
+        // Rank-based probability
+        if (equivalentRank <= predictedCutoffRank) {
+          probability = Math.min(95, 70 + (predictedCutoffRank - equivalentRank) / predictedCutoffRank * 25);
+        } else {
+          probability = Math.max(5, 70 - (equivalentRank - predictedCutoffRank) / predictedCutoffRank * 65);
+        }
+      } else if (normalizedMarks && predictedCutoffMarks) {
+        // Marks-based probability
+        if (normalizedMarks >= predictedCutoffMarks) {
+          probability = Math.min(95, 70 + (normalizedMarks - predictedCutoffMarks) / predictedCutoffMarks * 25);
+        } else {
+          probability = Math.max(5, 70 - (predictedCutoffMarks - normalizedMarks) / predictedCutoffMarks * 65);
+        }
+      }
+      
+      // Apply various adjustments
+      probability = this.applyProbabilityAdjustments(probability, studentScore, collegeData);
+      
+      return Math.round(Math.max(1, Math.min(99, probability)));
+      
+    } catch (error) {
+      console.error('Probability calculation error:', error);
+      return 50; // Default probability
+    }
+  }
+  
+  // Helper methods
+  private percentileToMarks(percentile: number, examType: string): number {
+    if (examType === 'NEET') {
+      // NEET scoring model (simplified)
+      if (percentile >= 99) return 680 + (percentile - 99) * 40;
+      if (percentile >= 95) return 600 + (percentile - 95) * 20;
+      if (percentile >= 85) return 500 + (percentile - 85) * 10;
+      if (percentile >= 50) return 350 + (percentile - 50) * 4.3;
+      return Math.max(0, percentile * 7);
+    } else {
+      // JEE Main scoring model (simplified)
+      if (percentile >= 99) return 280 + (percentile - 99) * 20;
+      if (percentile >= 95) return 220 + (percentile - 95) * 15;
+      if (percentile >= 85) return 150 + (percentile - 85) * 7;
+      if (percentile >= 50) return 50 + (percentile - 50) * 2.9;
+      return Math.max(0, percentile * 1);
+    }
+  }
+  
+  private marksToPercentile(marks: number, examType: string): number {
+    if (examType === 'NEET') {
+      if (marks >= 720) return 99.9;
+      if (marks >= 680) return 99 + (marks - 680) / 40;
+      if (marks >= 600) return 95 + (marks - 600) / 80 * 4;
+      if (marks >= 500) return 85 + (marks - 500) / 100 * 10;
+      if (marks >= 350) return 50 + (marks - 350) / 150 * 35;
+      return Math.max(0, marks / 350 * 50);
+    } else {
+      if (marks >= 300) return 99.9;
+      if (marks >= 280) return 99 + (marks - 280) / 20;
+      if (marks >= 220) return 95 + (marks - 220) / 60 * 4;
+      if (marks >= 150) return 85 + (marks - 150) / 70 * 10;
+      if (marks >= 50) return 50 + (marks - 50) / 100 * 35;
+      return Math.max(0, marks / 50 * 50);
+    }
+  }
+  
+  private calculateDifficultyAdjustment(historicalData: any[], targetYear: number): number {
+    if (!historicalData || historicalData.length < 2) return 0;
+    
+    // Calculate year-over-year trend in cutoffs
+    let totalAdjustment = 0;
+    let count = 0;
+    
+    for (let i = 1; i < historicalData.length; i++) {
+      const current = historicalData[i-1];
+      const previous = historicalData[i];
+      
+      if (current.closing_marks && previous.closing_marks) {
+        const yearDiff = current.exam_year - previous.exam_year;
+        if (yearDiff === 1) { // Consecutive years
+          const marksDiff = current.closing_marks - previous.closing_marks;
+          totalAdjustment += marksDiff;
+          count++;
+        }
+      }
+    }
+    
+    const avgYearlyChange = count > 0 ? totalAdjustment / count : 0;
+    const yearsFromLatest = targetYear - (historicalData[0]?.exam_year || targetYear);
+    
+    return avgYearlyChange * yearsFromLatest;
+  }
+  
+  private calculateTrendPrediction(cutoffs: any[], targetYear: number): any {
+    const sortedCutoffs = cutoffs.sort((a, b) => b.exam_year - a.exam_year);
+    const latestYear = sortedCutoffs[0]?.exam_year || targetYear - 1;
+    
+    if (sortedCutoffs.length === 0) {
+      return { predictedRank: 50000, predictedMarks: 400, trend: 'stable', confidence: 0.3, historicalYears: 0 };
+    }
+    
+    // Simple linear trend calculation
+    let rankTrend = 0;
+    let marksTrend = 0;
+    let trendCount = 0;
+    
+    for (let i = 1; i < Math.min(sortedCutoffs.length, 4); i++) {
+      const current = sortedCutoffs[i-1];
+      const previous = sortedCutoffs[i];
+      
+      if (current.closing_rank && previous.closing_rank) {
+        rankTrend += (current.closing_rank - previous.closing_rank);
+        trendCount++;
+      }
+      
+      if (current.closing_marks && previous.closing_marks) {
+        marksTrend += (current.closing_marks - previous.closing_marks);
+      }
+    }
+    
+    const avgRankChange = trendCount > 0 ? rankTrend / trendCount : 0;
+    const avgMarksChange = trendCount > 0 ? marksTrend / trendCount : 0;
+    
+    const latest = sortedCutoffs[0];
+    const yearsToProject = targetYear - latestYear;
+    
+    const predictedRank = (latest.closing_rank || 50000) + (avgRankChange * yearsToProject);
+    const predictedMarks = (latest.closing_marks || 400) + (avgMarksChange * yearsToProject);
+    
+    const trendDirection = avgRankChange > 100 ? 'increasing' : avgRankChange < -100 ? 'decreasing' : 'stable';
+    const confidence = Math.max(0.4, Math.min(0.9, 0.8 - (yearsToProject * 0.1)));
+    
+    return {
+      predictedRank: Math.round(Math.max(1, predictedRank)),
+      predictedMarks: Math.round(Math.max(0, predictedMarks)),
+      trend: trendDirection,
+      confidence: confidence,
+      historicalYears: sortedCutoffs.length
+    };
+  }
+  
+  private applyProbabilityAdjustments(baseProbability: number, studentScore: any, collegeData: any): number {
+    let adjustedProbability = baseProbability;
+    
+    // State quota adjustments
+    if (studentScore.hasStateQuota) {
+      adjustedProbability += 10;
+    }
+    
+    // Category adjustments
+    if (studentScore.category !== 'general') {
+      adjustedProbability += 5;
+    }
+    
+    // College type adjustments
+    if (collegeData.college.type === 'private') {
+      adjustedProbability += 15; // Private colleges typically have more seats
+    }
+    
+    // Trend adjustments
+    if (collegeData.prediction.trend === 'increasing') {
+      adjustedProbability += 5; // Easier to get in if cutoffs are rising (more seats/lower competition)
+    } else if (collegeData.prediction.trend === 'decreasing') {
+      adjustedProbability -= 5;
+    }
+    
+    return adjustedProbability;
+  }
+  
+  private groupBy(array: any[], key: string): { [key: string]: any[] } {
+    return array.reduce((result, item) => {
+      const group = item[key];
+      if (!result[group]) {
+        result[group] = [];
+      }
+      result[group].push(item);
+      return result;
+    }, {});
+  }
 }
 
-const handler = async (req: Request): Promise<Response> => {
+const mlEngine = new MLPredictionEngine();
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const predictionRequest: PredictionRequest = await req.json();
+    const { 
+      examType, 
+      scoreType, 
+      scoreValue, 
+      category, 
+      state = 'all',
+      year = 2025 
+    } = await req.json();
     
-    console.log('Processing ML prediction request:', predictionRequest);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Step 1: Normalize the input score
-    const normalizedScore = await normalizeScore(predictionRequest);
+    console.log(`ML Prediction for ${examType}: ${scoreValue} ${scoreType}, ${category} category`);
     
-    // Step 2: Get historical patterns
-    const historicalData = await getHistoricalPatterns(predictionRequest, supabase);
+    // Step 1: Normalize the student's score
+    const normalizedScore = await mlEngine.normalizeScore(scoreType, scoreValue, examType, year);
     
-    // Step 3: Apply ML prediction models
-    const predictions = await applyMLModels(normalizedScore, historicalData, predictionRequest);
+    // Step 2: Predict cutoffs for relevant colleges
+    const cutoffPredictions = await mlEngine.predictCutoffs(examType, category, state, year);
     
-    // Step 4: Generate confidence intervals
-    const confidenceIntervals = calculateConfidenceIntervals(predictions);
-
-    const response = {
-      input: predictionRequest,
-      normalizedScore,
-      predictions: predictions.slice(0, 50), // Top 50 predictions
-      confidenceIntervals,
-      modelMetadata: {
-        version: '1.0',
-        trainingData: '2018-2025',
-        algorithm: 'XGBoost + Historical Trend Analysis',
-        lastUpdated: new Date().toISOString()
+    // Step 3: Calculate admission probabilities
+    const predictions = [];
+    for (const collegeData of cutoffPredictions.slice(0, 50)) { // Limit to top 50
+      const admissionProbability = await mlEngine.calculateAdmissionProbability(normalizedScore, collegeData);
+      
+      predictions.push({
+        ...collegeData,
+        prediction: {
+          ...collegeData.prediction,
+          admissionProbability: admissionProbability
+        }
+      });
+    }
+    
+    // Sort by admission probability
+    const sortedPredictions = predictions.sort((a, b) => b.prediction.admissionProbability - a.prediction.admissionProbability);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      studentScore: normalizedScore,
+      predictions: sortedPredictions,
+      summary: {
+        totalColleges: sortedPredictions.length,
+        highProbability: sortedPredictions.filter(p => p.prediction.admissionProbability >= 70).length,
+        moderateProbability: sortedPredictions.filter(p => p.prediction.admissionProbability >= 40 && p.prediction.admissionProbability < 70).length,
+        lowProbability: sortedPredictions.filter(p => p.prediction.admissionProbability < 40).length
+      },
+      metadata: {
+        examType,
+        year,
+        category,
+        state,
+        processingTime: Date.now(),
+        modelVersion: '2.0'
       }
-    };
-
-    return new Response(JSON.stringify(response), {
-      status: 200,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error: any) {
-    console.error('ML Prediction Engine Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
-};
-
-// Advanced score normalization
-async function normalizeScore(request: PredictionRequest): Promise<any> {
-  let normalizedRank: number;
-  let estimatedPercentile: number;
-  let confidence = 0.8;
-
-  if (request.examType === 'NEET') {
-    if (request.scoreType === 'marks') {
-      // NEET marks to rank conversion (approximate formula based on historical data)
-      normalizedRank = Math.max(1, Math.round((720 - request.scoreValue) * 2800));
-      estimatedPercentile = Math.max(0, (1 - normalizedRank / 1600000) * 100);
-    } else if (request.scoreType === 'rank') {
-      normalizedRank = request.scoreValue;
-      estimatedPercentile = Math.max(0, (1 - normalizedRank / 1600000) * 100);
-    } else {
-      // Percentile to rank (NEET doesn't officially use percentiles)
-      normalizedRank = Math.round((100 - request.scoreValue) * 16000);
-      estimatedPercentile = request.scoreValue;
-      confidence = 0.6; // Lower confidence for unofficial percentile
-    }
-  } else { // JEE-MAIN
-    if (request.scoreType === 'percentile') {
-      // JEE Main percentile to rank conversion
-      normalizedRank = Math.max(1, Math.round((100 - request.scoreValue) * 12000));
-      estimatedPercentile = request.scoreValue;
-    } else if (request.scoreType === 'rank') {
-      normalizedRank = request.scoreValue;
-      estimatedPercentile = Math.max(0, (1 - normalizedRank / 1200000) * 100);
-    } else {
-      // JEE Main marks to percentile (approximate)
-      estimatedPercentile = Math.min(100, (request.scoreValue / 300) * 85);
-      normalizedRank = Math.round((100 - estimatedPercentile) * 12000);
-    }
-  }
-
-  // Apply year-based difficulty adjustment
-  const difficultyAdjustment = getDifficultyAdjustment(request.examType, request.year);
-  const adjustedRank = Math.round(normalizedRank * difficultyAdjustment);
-
-  return {
-    originalScore: request.scoreValue,
-    originalType: request.scoreType,
-    normalizedRank,
-    adjustedRank,
-    estimatedPercentile,
-    difficultyAdjustment,
-    confidence
-  };
-}
-
-// Get historical cutoff patterns
-async function getHistoricalPatterns(request: PredictionRequest, supabase: any): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('historical_cutoffs')
-    .select(`
-      *,
-      colleges!inner(*)
-    `)
-    .eq('exam_name', request.examType)
-    .eq('category', request.category)
-    .gte('exam_year', 2020) // Last 5 years
-    .order('closing_rank', { ascending: true });
-
-  if (error) {
-    console.error('Historical data query error:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-// Apply ML prediction models
-async function applyMLModels(
-  normalizedScore: any, 
-  historicalData: any[], 
-  request: PredictionRequest
-): Promise<any[]> {
-  
-  const predictions = [];
-  
-  for (const historical of historicalData) {
-    const college = historical.colleges;
+  } catch (error) {
+    console.error('ML Prediction Engine error:', error);
     
-    // Feature engineering for ML model
-    const features = {
-      studentRank: normalizedScore.adjustedRank,
-      studentPercentile: normalizedScore.estimatedPercentile,
-      historicalClosingRank: historical.closing_rank,
-      historicalOpeningRank: historical.opening_rank,
-      collegeType: getCollegeTypeScore(college.type),
-      stateQuota: historical.state_quota ? 1 : 0,
-      examYear: request.year,
-      category: getCategoryScore(request.category),
-      fees: (college.annual_fees_min + college.annual_fees_max) / 2 || 100000
-    };
-
-    // Simple ML model (in production, this would be a trained XGBoost/CatBoost model)
-    const admissionProbability = calculateAdmissionProbability(features);
-    
-    // Financial feasibility score
-    const financialFeasibility = calculateFinancialFeasibility(features.fees, request);
-    
-    // Overall recommendation score
-    const overallScore = (
-      admissionProbability * 0.4 +
-      (college.safety_score / 10) * 0.25 +
-      (college.placement_score / 10) * 0.2 +
-      financialFeasibility * 0.15
-    );
-
-    if (admissionProbability > 0.1) { // Only include if there's some chance
-      predictions.push({
-        college: {
-          id: college.id,
-          name: college.name,
-          location: college.location,
-          state: college.state,
-          type: college.type,
-          courses: college.courses,
-          fees: {
-            min: college.annual_fees_min,
-            max: college.annual_fees_max
-          },
-          facilities: {
-            hostel: college.hostel_available,
-            safety_score: college.safety_score,
-            placement_score: college.placement_score
-          }
-        },
-        prediction: {
-          admissionProbability: Math.round(admissionProbability * 100),
-          predictedCutoffRank: historical.closing_rank,
-          rankDifference: normalizedScore.adjustedRank - historical.closing_rank,
-          round: historical.round_number,
-          overallScore,
-          financialFeasibility: Math.round(financialFeasibility * 100)
-        },
-        reasoning: generatePredictionReasoning(features, admissionProbability, college)
-      });
-    }
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message,
+      fallback: "Machine learning prediction temporarily unavailable. Using basic estimation."
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-
-  // Sort by overall score and admission probability
-  return predictions.sort((a, b) => {
-    if (Math.abs(a.prediction.overallScore - b.prediction.overallScore) < 0.1) {
-      return b.prediction.admissionProbability - a.prediction.admissionProbability;
-    }
-    return b.prediction.overallScore - a.prediction.overallScore;
-  });
-}
-
-// Calculate admission probability using simplified ML model
-function calculateAdmissionProbability(features: any): number {
-  const rankDiff = features.studentRank - features.historicalClosingRank;
-  
-  // Sigmoid-like function for probability
-  let probability = 0.5;
-  
-  if (rankDiff < -100) probability = 0.95; // Much better rank
-  else if (rankDiff < -50) probability = 0.85;
-  else if (rankDiff < 0) probability = 0.7;
-  else if (rankDiff < 50) probability = 0.5;
-  else if (rankDiff < 100) probability = 0.3;
-  else if (rankDiff < 200) probability = 0.15;
-  else probability = 0.05;
-
-  // Adjust for state quota
-  if (features.stateQuota) probability *= 1.2;
-  
-  // Adjust for college type
-  if (features.collegeType === 1) probability *= 0.9; // Government colleges are harder
-  
-  return Math.min(0.95, Math.max(0.05, probability));
-}
-
-// Calculate financial feasibility
-function calculateFinancialFeasibility(fees: number, request: PredictionRequest): number {
-  // Simple income-based model (would be more sophisticated in production)
-  const feeThresholds = {
-    'low': 50000,
-    'medium': 200000,
-    'high': 500000
-  };
-  
-  // Assume medium income if not specified
-  const assumedIncome = 'medium';
-  const threshold = feeThresholds[assumedIncome];
-  
-  if (fees <= threshold) return 1.0;
-  else if (fees <= threshold * 1.5) return 0.7;
-  else if (fees <= threshold * 2) return 0.4;
-  else return 0.2;
-}
-
-// Generate reasoning for predictions
-function generatePredictionReasoning(features: any, probability: number, college: any): string {
-  const reasons = [];
-  
-  if (features.studentRank < features.historicalClosingRank) {
-    reasons.push('Your rank is better than last year\'s cutoff');
-  } else if (features.studentRank < features.historicalClosingRank + 100) {
-    reasons.push('Your rank is close to the cutoff range');
-  }
-  
-  if (features.stateQuota) {
-    reasons.push('State quota advantage applicable');
-  }
-  
-  if (college.safety_score > 8) {
-    reasons.push('Excellent safety rating');
-  }
-  
-  if (probability > 0.7) {
-    reasons.push('High admission probability based on historical trends');
-  } else if (probability < 0.3) {
-    reasons.push('Consider as reach option');
-  }
-  
-  return reasons.join(', ') || 'Standard prediction based on historical data';
-}
-
-// Helper functions
-function getCollegeTypeScore(type: string): number {
-  const scores = {
-    'government': 1,
-    'semi_government': 0.8,
-    'private': 0.6,
-    'deemed': 0.7,
-    'nit': 0.9,
-    'iiit': 0.85
-  };
-  return scores[type] || 0.6;
-}
-
-function getCategoryScore(category: string): number {
-  const scores = {
-    'general': 1,
-    'ews': 0.9,
-    'obc': 0.8,
-    'sc': 0.7,
-    'st': 0.6
-  };
-  return scores[category] || 0.8;
-}
-
-function getDifficultyAdjustment(examType: string, year: number): number {
-  // Historical difficulty analysis
-  const adjustments = {
-    'NEET': { 2023: 1.1, 2024: 1.05, 2025: 0.98 },
-    'JEE-MAIN': { 2023: 1.08, 2024: 1.02, 2025: 1.01 }
-  };
-  
-  return adjustments[examType]?.[year] || 1.0;
-}
-
-function calculateConfidenceIntervals(predictions: any[]): any {
-  return {
-    high_confidence: predictions.filter(p => p.prediction.admissionProbability > 70).length,
-    medium_confidence: predictions.filter(p => p.prediction.admissionProbability > 40 && p.prediction.admissionProbability <= 70).length,
-    low_confidence: predictions.filter(p => p.prediction.admissionProbability <= 40).length,
-    total_predictions: predictions.length
-  };
-}
-
-serve(handler);
+});
