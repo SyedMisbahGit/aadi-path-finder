@@ -1,21 +1,17 @@
 
 export interface JEEProfile {
-  id?: string;
   name?: string;
   jeePercentile: number;
-  jeeRank?: number;
   category: 'general' | 'obc' | 'sc' | 'st' | 'ews';
   state: string;
   gender: 'male' | 'female' | 'other';
   preferredBranches: string[];
   budget: 'government' | 'private' | 'any';
   preferences: {
-    location?: string[];
-    collegeType?: ('nit' | 'iiit' | 'gfti')[];
-    placementPriority?: number; // 1-10 scale
+    location: string[];
+    collegeType: string[];
+    placementPriority: number;
   };
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface JEECollege {
@@ -25,7 +21,10 @@ export interface JEECollege {
   state: string;
   type: 'nit' | 'iiit' | 'gfti' | 'private';
   branches: string[];
-  fees: { min: number; max: number };
+  fees: {
+    min: number;
+    max: number;
+  };
   placementData: {
     averagePackage: number;
     highestPackage: number;
@@ -33,17 +32,6 @@ export interface JEECollege {
   };
   ranking: number;
   aicteApproved: boolean;
-  establishedYear?: number;
-}
-
-export interface JEECutoff {
-  collegeId: string;
-  branch: string;
-  category: string;
-  round: number;
-  openingRank: number;
-  closingRank: number;
-  year: number;
 }
 
 export interface JEERecommendation {
@@ -56,4 +44,13 @@ export interface JEERecommendation {
   benefits: string[];
   riskFactors: string[];
   estimatedCost: number;
+}
+
+export interface JEESeatInfo {
+  college: string;
+  branch: string;
+  category: string;
+  totalSeats: number;
+  availableSeats: number;
+  cutoffRank: number;
 }
