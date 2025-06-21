@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface CutoffPrediction {
@@ -31,64 +30,78 @@ class AutonomousAI {
   private dataCache: Map<string, any> = new Map();
   private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-  // Autonomous Data Crawling
+  // Autonomous Data Crawling with backend integration
   async crawlLiveCounselingData(examType: 'NEET' | 'JEE-MAIN'): Promise<LiveCounselingData> {
     try {
       console.log(`Crawling live ${examType} counseling data...`);
       
-      // This would integrate with real APIs/crawlers
-      const { data, error } = await supabase.functions.invoke('crawl-counseling-data', {
-        body: { examType, year: 2025 }
+      const { data, error } = await supabase.functions.invoke('autonomous-data-crawler', {
+        body: { 
+          sources: ['all'],
+          examType, 
+          year: 2025 
+        }
       });
 
       if (error) throw error;
       
-      return data;
+      return {
+        examType,
+        round: data.currentRound || 1,
+        seatMatrix: data.seatMatrix || [],
+        cutoffs: data.cutoffs || [],
+        lastUpdated: data.lastUpdated || new Date().toISOString()
+      };
     } catch (error) {
       console.error('Live data crawling failed:', error);
-      // Fallback to cached/historical data
       return this.getFallbackData(examType);
     }
   }
 
-  // ML-based Cutoff Prediction
+  // ML-based Cutoff Prediction with backend integration
   async predictCutoffs(
     examType: 'NEET' | 'JEE-MAIN',
     category: string,
     state: string,
+    scoreValue: number,
+    scoreType: 'marks' | 'percentile' | 'rank' = 'marks',
     year: number = 2025
   ): Promise<CutoffPrediction[]> {
     try {
-      const cacheKey = `cutoffs-${examType}-${category}-${state}-${year}`;
+      const cacheKey = `cutoffs-${examType}-${category}-${state}-${scoreValue}-${year}`;
       const cached = this.getFromCache(cacheKey);
       if (cached) return cached;
 
-      // Prepare features for ML model
-      const features = {
-        examType,
-        category,
-        state,
-        year,
-        difficulty: await this.assessExamDifficulty(examType, year),
-        economicFactors: await this.getEconomicIndicators(state),
-        demographicTrend: await this.getDemographicTrend(category, state)
-      };
-
-      const { data, error } = await supabase.functions.invoke('predict-cutoffs', {
-        body: { features }
+      const { data, error } = await supabase.functions.invoke('ml-prediction-engine', {
+        body: { 
+          examType,
+          scoreType,
+          scoreValue,
+          category,
+          state,
+          year
+        }
       });
 
       if (error) throw error;
 
-      this.setCache(cacheKey, data.predictions);
-      return data.predictions;
+      const predictions = data.predictions.map((pred: any) => ({
+        college: pred.college.name,
+        course: pred.college.courses[0] || 'MBBS',
+        predictedCutoff: pred.prediction.predictedCutoffRank,
+        confidence: pred.prediction.admissionProbability / 100,
+        factors: [pred.reasoning]
+      }));
+
+      this.setCache(cacheKey, predictions);
+      return predictions;
     } catch (error) {
       console.error('Cutoff prediction failed:', error);
       return this.getFallbackCutoffs(examType, category);
     }
   }
 
-  // AI-powered Safety & Cultural Scoring
+  // AI-powered Safety & Cultural Scoring with backend integration
   async calculateSafetyScore(
     collegeName: string,
     location: string,
@@ -99,13 +112,13 @@ class AutonomousAI {
       const cached = this.getFromCache(cacheKey);
       if (cached) return cached;
 
-      // Analyze news sentiment and safety incidents
-      const { data, error } = await supabase.functions.invoke('analyze-safety', {
+      const { data, error } = await supabase.functions.invoke('safety-cultural-analyzer', {
         body: { 
-          collegeName, 
-          location, 
+          college: collegeName,
+          location: location,
+          state: location, // Simplified for now
           gender,
-          analysisType: 'comprehensive'
+          culturalNeeds: gender === 'female' ? ['safety-priority'] : []
         }
       });
 
@@ -114,10 +127,10 @@ class AutonomousAI {
       const safetyScore: SafetyScore = {
         college: collegeName,
         location,
-        overallSafety: data.overallSafety,
-        genderSafety: data.genderSafety,
-        culturalAcceptance: data.culturalAcceptance,
-        sources: data.sources
+        overallSafety: data.safetyAnalysis.overallScore,
+        genderSafety: data.safetyAnalysis.genderSafetyScore,
+        culturalAcceptance: data.culturalAnalysis.overallScore,
+        sources: data.safetyAnalysis.sources
       };
 
       this.setCache(cacheKey, safetyScore);
@@ -128,53 +141,22 @@ class AutonomousAI {
     }
   }
 
-  // Autonomous Score Normalization
-  async normalizeScores(
-    examType: 'NEET' | 'JEE-MAIN',
-    scoreType: 'percentile' | 'rank' | 'marks',
-    value: number,
-    session?: string
-  ): Promise<{ normalizedScore: number; equivalentRank: number; confidence: number }> {
+  // Enhanced Personalized Recommendations with full AI backend
+  async getPersonalizedRecommendations(profile: any): Promise<any[]> {
     try {
-      const { data, error } = await supabase.functions.invoke('normalize-scores', {
+      console.log('Getting AI-powered recommendations for:', profile);
+
+      const { data, error } = await supabase.functions.invoke('ai-counselor-engine', {
         body: { 
-          examType, 
-          scoreType, 
-          value, 
-          session,
-          year: 2025
+          message: `I have ${profile.scoreValue} ${profile.scoreType} in ${profile.exam}, ${profile.category} category, from ${profile.state}. Show me college recommendations.`,
+          studentProfile: profile,
+          examType: profile.exam
         }
       });
 
       if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Score normalization failed:', error);
-      return this.estimateNormalization(examType, scoreType, value);
-    }
-  }
 
-  // Predictive College Matching
-  async getPersonalizedRecommendations(profile: any): Promise<any[]> {
-    try {
-      const features = {
-        ...profile,
-        safetyScores: await this.batchCalculateSafety(profile),
-        cutoffPredictions: await this.predictCutoffs(
-          profile.exam, 
-          profile.category, 
-          profile.state
-        ),
-        financialFit: this.assessFinancialFit(profile),
-        culturalFit: this.assessCulturalFit(profile)
-      };
-
-      const { data, error } = await supabase.functions.invoke('ai-recommendations', {
-        body: { profile: features }
-      });
-
-      if (error) throw error;
-      return data.recommendations;
+      return data.recommendations || [];
     } catch (error) {
       console.error('AI recommendations failed:', error);
       return [];

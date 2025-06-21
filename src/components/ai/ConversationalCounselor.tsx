@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Mic, Send, Bot, User, Brain, Target, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -65,6 +65,27 @@ I understand incomplete information and will guide you through everything!`,
   }, [messages]);
 
   const processNaturalLanguageInput = async (text: string): Promise<any> => {
+    try {
+      // Call the AI counselor engine
+      const { data, error } = await supabase.functions.invoke('ai-counselor-engine', {
+        body: { 
+          message: text,
+          studentProfile,
+          language: 'en', // Can be made dynamic
+          examType: 'NEET' // Can be detected from context
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('AI processing error:', error);
+      // Fallback to local processing
+      return await this.localProcessing(text);
+    }
+  };
+
+  const localProcessing = async (text: string) => {
     // Advanced NLP processing to extract student data
     const patterns = {
       exam: /(neet|jee[- ]?main|medical|engineering)/i,
@@ -144,6 +165,15 @@ I understand incomplete information and will guide you through everything!`,
   };
 
   const generateAIResponse = (extractedData: any, userText: string): string => {
+    if (!extractedData || !extractedData.response) {
+      // Fallback to local response generation
+      return this.generateLocalResponse(extractedData, userText);
+    }
+    
+    return extractedData.response;
+  };
+
+  const generateLocalResponse = (extractedData: any, userText: string): string => {
     let response = '';
     
     if (extractedData.reasoning && extractedData.reasoning.length > 0) {
@@ -222,7 +252,7 @@ I understand incomplete information and will guide you through everything!`,
     setIsProcessing(true);
 
     try {
-      // Process natural language input
+      // Process natural language input with backend AI
       const extractedData = await processNaturalLanguageInput(input);
       
       // Update student profile
