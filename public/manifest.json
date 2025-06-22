@@ -1,0 +1,211 @@
+{
+  "name": "Al-Naseeh V3 - AI College Counselor",
+  "short_name": "Al-Naseeh",
+  "description": "Advanced AI-powered college counseling platform for NEET and JEE students with multilingual support and cultural safety analysis",
+  "version": "3.0.0",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "AI Counselor",
+      "short_name": "Counselor",
+      "description": "Start a conversation with AI counselor",
+      "url": "/ai-counselor",
+      "icons": [
+        {
+          "src": "/icons/counselor-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Document Advisor",
+      "short_name": "Documents",
+      "description": "Check document requirements and preparation",
+      "url": "/document-advisor",
+      "icons": [
+        {
+          "src": "/icons/documents-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Safety Analysis",
+      "short_name": "Safety",
+      "description": "Analyze college safety and cultural fit",
+      "url": "/safety-analysis",
+      "icons": [
+        {
+          "src": "/icons/safety-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "NEET Counseling",
+      "short_name": "NEET",
+      "description": "NEET-specific counseling and guidance",
+      "url": "/neet-counseling",
+      "icons": [
+        {
+          "src": "/icons/neet-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "JEE Counseling",
+      "short_name": "JEE",
+      "description": "JEE-specific counseling and guidance",
+      "url": "/jee-counseling",
+      "icons": [
+        {
+          "src": "/icons/jee-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home screen with AI counselor access"
+    },
+    {
+      "src": "/screenshots/mobile-counselor.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AI counselor conversation interface"
+    },
+    {
+      "src": "/screenshots/mobile-documents.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Document advisor with upload functionality"
+    },
+    {
+      "src": "/screenshots/mobile-safety.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Safety analysis and cultural scoring"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+alnaseeh",
+      "url": "/?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/document-advisor",
+      "accept": {
+        "application/pdf": [".pdf"],
+        "image/*": [".jpg", ".jpeg", ".png"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["application/pdf", "image/*"]
+        }
+      ]
+    }
+  },
+  "permissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ],
+  "features": [
+    "Cross Platform",
+    "fast",
+    "simple",
+    "ai-powered",
+    "multilingual",
+    "voice-support",
+    "offline-capable",
+    "cultural-aware"
+  ]
+} 

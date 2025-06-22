@@ -114,6 +114,8 @@ import { supabase } from '@/integrations/supabase/client';
 import type { NEETProfile } from '@/types/neet';
 import type { JEEProfile } from '@/types/jee';
 
+import { pwaManager, isMobile } from '@/utils/pwa';
+
 function App() {
   const [language, setLanguage] = useState<'en' | 'hi' | 'ur'>('en');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -133,7 +135,7 @@ function App() {
   const [showV2Features, setShowV2Features] = useState(false);
 
   const { user, signIn, signOut, loading } = useAuth();
-  const isMobile = useIsMobile();
+  const isMobileDevice = isMobile();
   useUrduFonts(language);
 
   // Al-Naseeh V2 Features State
@@ -152,6 +154,9 @@ function App() {
     multilingualSupport: true
   });
 
+  const [pwaState, setPwaState] = useState(pwaManager.getState());
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+
   useEffect(() => {
     // Load user preferences
     const savedLanguage = localStorage.getItem('language') as 'en' | 'hi' | 'ur';
@@ -162,6 +167,25 @@ function App() {
     
     // Apply theme
     document.documentElement.classList.toggle('dark', theme === 'dark');
+
+    // Listen for PWA state changes
+    const handleStateChange = (state: any) => {
+      setPwaState(state);
+    };
+
+    pwaManager.on('stateChange', handleStateChange);
+    pwaManager.on('updateAvailable', () => setShowUpdateBanner(true));
+
+    // Register PWA features
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        console.log('[App] Service Worker ready:', registration);
+      });
+    }
+
+    return () => {
+      pwaManager.off('stateChange', handleStateChange);
+    };
   }, [theme]);
 
   const handleLanguageChange = (newLanguage: 'en' | 'hi' | 'ur') => {
@@ -516,7 +540,7 @@ function App() {
   );
 
   const renderSidebar = () => (
-    <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isMobile ? 'block' : 'hidden lg:block lg:translate-x-0'}`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isMobileDevice ? 'block' : 'hidden lg:block lg:translate-x-0'}`}>
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-lg font-semibold">Al-Naseeh V2</h2>
         <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)} className="lg:hidden">
@@ -592,6 +616,13 @@ function App() {
     );
   }
 
+  const handleUpdate = () => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    }
+  };
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="flex">
@@ -599,7 +630,7 @@ function App() {
         {renderSidebar()}
         
         {/* Main Content */}
-        <div className={`flex-1 ${isMobile ? 'w-full' : 'lg:ml-64'}`}>
+        <div className={`flex-1 ${isMobileDevice ? 'w-full' : 'lg:ml-64'}`}>
           {/* Header */}
           <header className="bg-white dark:bg-gray-900 shadow-sm border-b p-4">
             <div className="flex items-center justify-between">
@@ -643,6 +674,34 @@ function App() {
         </div>
       </div>
       
+      {/* Update Banner */}
+      {showUpdateBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                New version available
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleUpdate}
+                className="px-3 py-1 bg-white text-blue-600 rounded text-sm font-medium hover:bg-gray-100"
+              >
+                Update
+              </button>
+              <button
+                onClick={() => setShowUpdateBanner(false)}
+                className="text-white hover:bg-blue-700 p-1 rounded"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster position="bottom-right" />
     </div>
   );
