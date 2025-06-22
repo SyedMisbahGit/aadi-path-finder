@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -26,8 +25,9 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
       await signIn(email, password);
       toast.success("Successfully signed in!");
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -40,8 +40,9 @@ export const AuthModal = ({ open, onOpenChange }: AuthModalProps) => {
       await signUp(email, password);
       toast.success("Check your email for verification link!");
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

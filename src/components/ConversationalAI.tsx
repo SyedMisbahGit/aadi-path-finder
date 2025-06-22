@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +13,17 @@ interface Message {
   timestamp: Date;
 }
 
+interface ExtractedData {
+  neetScore?: string;
+  jeeMainPercentile?: string;
+  rank?: string;
+  category?: string;
+  domicileState?: string;
+  gender?: string;
+}
+
 interface ConversationalAIProps {
-  onDataExtracted: (data: any) => void;
+  onDataExtracted: (data: ExtractedData) => void;
   examType: string;
 }
 
@@ -45,6 +53,7 @@ You can say something like: "I got 641 in NEET, OBC category, from Bihar - what 
   useEffect(() => {
     // Initialize speech recognition if available
     if ('webkitSpeechRecognition' in window) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new (window as any).webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -85,7 +94,7 @@ You can say something like: "I got 641 in NEET, OBC category, from Bihar - what 
     }
   };
 
-  const extractDataFromMessage = (message: string) => {
+  const extractDataFromMessage = (message: string): ExtractedData => {
     // Simple pattern matching to extract common information
     const patterns = {
       neetScore: /(\d{3,4})\s*(?:in\s*)?neet/i,
@@ -96,7 +105,7 @@ You can say something like: "I got 641 in NEET, OBC category, from Bihar - what 
       gender: /(male|female|girl|boy)/i,
     };
 
-    const extractedData: any = {};
+    const extractedData: ExtractedData = {};
 
     // Extract score/percentile
     if (examType === 'NEET UG') {

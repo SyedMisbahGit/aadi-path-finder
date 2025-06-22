@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, MessageCircle, Mail, Phone, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
+interface Alert {
+  id: string;
+  type: 'counseling' | 'document' | 'payment' | 'result';
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  date: string;
+  actionRequired: boolean;
+}
+
 interface AlertPreferences {
   whatsapp: boolean;
   email: boolean;
@@ -17,6 +26,13 @@ interface AlertPreferences {
   cutoffChanges: boolean;
   documentReminders: boolean;
   counselingDates: boolean;
+}
+
+interface ContactInfo {
+  whatsappNumber: string;
+  email: string;
+  parentNumber: string;
+  parentEmail: string;
 }
 
 interface AlertSystemProps {
@@ -34,33 +50,17 @@ export const AlertSystem = ({ language }: AlertSystemProps) => {
     counselingDates: true
   });
 
-  const [contactInfo, setContactInfo] = useState({
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
     whatsappNumber: '',
     email: '',
     parentNumber: '',
     parentEmail: ''
   });
 
-  const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
+  const [activeAlerts, setActiveAlerts] = useState<Alert[]>([]);
 
-  useEffect(() => {
-    // Load saved preferences
-    const saved = localStorage.getItem('alert-preferences');
-    if (saved) {
-      setPreferences(JSON.parse(saved));
-    }
-
-    const savedContact = localStorage.getItem('contact-info');
-    if (savedContact) {
-      setContactInfo(JSON.parse(savedContact));
-    }
-
-    // Generate current alerts
-    generateActiveAlerts();
-  }, []);
-
-  const generateActiveAlerts = () => {
-    const alerts = [];
+  const generateActiveAlerts = useCallback(() => {
+    const alerts: Alert[] = [];
     const currentDate = new Date();
 
     // Sample alerts
@@ -79,7 +79,23 @@ export const AlertSystem = ({ language }: AlertSystemProps) => {
     });
 
     setActiveAlerts(alerts);
-  };
+  }, [language]);
+
+  useEffect(() => {
+    // Load saved preferences
+    const saved = localStorage.getItem('alert-preferences');
+    if (saved) {
+      setPreferences(JSON.parse(saved));
+    }
+
+    const savedContact = localStorage.getItem('contact-info');
+    if (savedContact) {
+      setContactInfo(JSON.parse(savedContact));
+    }
+
+    // Generate current alerts
+    generateActiveAlerts();
+  }, [generateActiveAlerts]);
 
   const savePreferences = () => {
     localStorage.setItem('alert-preferences', JSON.stringify(preferences));

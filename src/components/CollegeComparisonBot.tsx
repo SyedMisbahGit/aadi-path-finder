@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +7,14 @@ import { ArrowLeftRight, Zap, TrendingUp, MapPin, DollarSign, Shield, Users } fr
 import { toast } from "sonner";
 import { aiService } from "@/services/aiService";
 
+interface College {
+  name: string;
+  score: number;
+}
+
 interface ComparisonResult {
-  college1: any;
-  college2: any;
+  college1: College;
+  college2: College;
   winner: string;
   comparison: {
     fees: { winner: string; difference: string };

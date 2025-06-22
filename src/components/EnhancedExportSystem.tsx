@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +8,29 @@ import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
+interface CollegeData {
+  name: string;
+  location: string;
+  fees?: {
+    min: number;
+    max: number;
+  };
+  admissionProbability: number;
+  safetyRating: number;
+  culturalFit?: number;
+  aiReasoning?: string;
+}
+
+interface StudentProfile {
+  name?: string;
+  category?: string;
+  state?: string;
+  [key: string]: unknown;
+}
+
 interface EnhancedExportSystemProps {
-  data: any[];
-  studentProfile: any;
+  data: CollegeData[];
+  studentProfile: StudentProfile;
   language: 'en' | 'hi' | 'ur';
 }
 
@@ -67,7 +86,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
 
     const rows = data.map(item => [
       item.name || '',
-      `${item.location || ''}, ${item.state || ''}`,
+      item.location || '',
       `₹${item.fees?.min || 0} - ₹${item.fees?.max || 0}`,
       item.admissionProbability || 0,
       item.safetyRating || 0,
@@ -200,26 +219,29 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
       const filename = `al-naseeh-report-${timestamp}`;
       
       switch (exportFormat) {
-        case 'xlsx':
+        case 'xlsx': {
           const workbook = generateExcelReport();
           const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
           const excelBlob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
           saveAs(excelBlob, `${filename}.xlsx`);
           break;
+        }
           
-        case 'csv':
+        case 'csv': {
           const csvContent = generateCSVReport();
           const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
           saveAs(csvBlob, `${filename}.csv`);
           break;
+        }
           
-        case 'pdf':
+        case 'pdf': {
           const htmlContent = await generatePDFReport();
           const pdfBlob = new Blob([htmlContent], { type: 'text/html' });
           saveAs(pdfBlob, `${filename}.html`);
           break;
+        }
           
-        case 'json':
+        case 'json': {
           const jsonContent = JSON.stringify({
             studentProfile,
             recommendations: data,
@@ -234,6 +256,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
           const jsonBlob = new Blob([jsonContent], { type: 'application/json' });
           saveAs(jsonBlob, `${filename}.json`);
           break;
+        }
       }
       
       toast.success(`Report exported successfully as ${exportFormat.toUpperCase()}!`);
@@ -259,7 +282,7 @@ export const EnhancedExportSystem = ({ data, studentProfile, language }: Enhance
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Export Format</label>
-            <Select value={exportFormat} onValueChange={(value: any) => setExportFormat(value)}>
+            <Select value={exportFormat} onValueChange={(value: 'xlsx' | 'csv' | 'pdf' | 'json') => setExportFormat(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

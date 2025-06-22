@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,19 +7,32 @@ import { Badge } from "@/components/ui/badge";
 import { Mic, Send, Bot, User, MicOff, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 
+interface ExtractedData {
+  neetScore?: string;
+  category?: string;
+  domicileState?: string;
+  gender?: string;
+  [key: string]: unknown;
+}
+
 interface Message {
   id: string;
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
-  data?: any;
+  data?: ExtractedData;
   suggestions?: string[];
 }
 
 interface IntelligentChatAIProps {
-  onDataExtracted: (data: any) => void;
+  onDataExtracted: (data: ExtractedData) => void;
   examType: string;
-  studentProfile?: any;
+  studentProfile?: {
+    name?: string;
+    category?: string;
+    state?: string;
+    [key: string]: unknown;
+  };
 }
 
 export const IntelligentChatAI = ({ onDataExtracted, examType, studentProfile }: IntelligentChatAIProps) => {
@@ -95,7 +107,7 @@ Examples:
   const speakText = (text: string) => {
     if (speechSynthesisRef.current && !isSpeaking) {
       // Clean text for speech (remove emojis and special characters)
-      const cleanText = text.replace(/[🎯🏥💰📍⚠️📄📆✅‣]/g, '').replace(/\n/g, '. ');
+      const cleanText = text.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').replace(/\n/g, '. ');
       
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'en-IN';
@@ -141,7 +153,7 @@ Examples:
       course: /(mbbs|bds|bams|bhms|bums|veterinary|nursing|physiotherapy)/i
     };
 
-    const extractedData: any = {};
+    const extractedData: ExtractedData = {};
     let responseContext = '';
 
     // Extract NEET score
