@@ -1,1 +1,57 @@
- 
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "functions": {
+    "src/pages/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "supabase/functions/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=600"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/ai/(.*)",
+      "destination": "/api/ai/$1"
+    },
+    {
+      "source": "/api/safety/(.*)",
+      "destination": "/api/safety/$1"
+    },
+    {
+      "source": "/api/documents/(.*)",
+      "destination": "/api/documents/$1"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_APP_VERSION": "3.0.0",
+    "NEXT_PUBLIC_AI_MODEL": "llama3",
+    "NEXT_PUBLIC_MULTILINGUAL": "true",
+    "NEXT_PUBLIC_VOICE_AI": "true"
+  }
+} 
